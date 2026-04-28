@@ -155,22 +155,20 @@ def get_servers():
             uuid = n.get("uuid") or ""
             prov = n.get("provision_state") or ""
             
-            err_msg = n.get("last_error") or n.get("fault") or ""
-            if not err_msg and ("error" in prov.lower() or "failed" in prov.lower()):
-                try:
-                    node_r = requests.get(f"{IRONIC_BASE_URL}/nodes/{uuid}", headers=IRONIC_HEADERS)
-                    if node_r.ok:
-                        err_msg = node_r.json().get("last_error") or ""
-                except:
-                    pass
-                
+            is_error = "error" in prov.lower() or "failed" in prov.lower()
+            err_msg = ""
+            
+            if is_error:
+                err_msg = n.get("last_error") or n.get("fault") or ""
+                if not err_msg:
+                    try:
+                        node_r = requests.get(f"{IRONIC_BASE_URL}/nodes/{uuid}", headers=IRONIC_HEADERS)
+                        if node_r.ok:
+                            err_msg = node_r.json().get("last_error") or ""
+                    except:
+                        pass
                 if not err_msg:
                     err_msg = f"Node is in {prov} state"
-                
-            is_error = "error" in prov.lower() or "failed" in prov.lower() or bool(n.get("fault"))
-            if not is_error and err_msg and err_msg != f"Node is in {prov} state":
-                # Some states like 'available' might still have old last_error. We should only consider it an error if provision_state indicates it or fault is present.
-                pass
             
             rows.append({
                 "order": i,
@@ -180,12 +178,29 @@ def get_servers():
                 "bmc_ip": get_bmc_ip(n),
                 "provision_state": prov,
                 "uuid": uuid,
+                "maintenance": bool(n.get("maintenance")),
                 "health": "error" if is_error else "ok",
                 "last_error": err_msg
             })
         return {"rows": rows}
     except Exception as e:
         return {"rows": [], "error": str(e)}
+
+class MaintenancePayload(BaseModel):
+    uuid: str
+    maintenance: bool
+    reason: str = ""
+
+@app.post("/api/maintenance")
+def toggle_maintenance(payload: MaintenancePayload):
+    try:
+        if payload.maintenance:
+            r = requests.put(f"{IRONIC_BASE_URL}/nodes/{payload.uuid}/maintenance", headers=IRONIC_HEADERS, json={"reason": payload.reason})
+        else:
+            r = requests.delete(f"{IRONIC_BASE_URL}/nodes/{payload.uuid}/maintenance", headers=IRONIC_HEADERS)
+        return handle_ironic_response(r)
+    except Exception as e:
+        return {"ok": False, "error": str(e)}
 
 @app.get("/api/deploy_files")
 def get_deploy_files():

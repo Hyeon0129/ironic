@@ -250,6 +250,30 @@ function executeRaid(type) {
 }
 window.executeRaid = executeRaid;
 
+window.toggleMaintenance = function(uuid, targetState) {
+  if (!confirm(`Are you sure you want to turn ${targetState ? 'ON' : 'OFF'} maintenance for this node?`)) return;
+  
+  const processingId = toastManager.show(`Setting maintenance to ${targetState}...`, 'info', 'Maintenance', 0);
+  
+  fetch(`${API_BASE}/api/maintenance`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ uuid: uuid, maintenance: targetState, reason: 'Toggled via Dashboard' })
+  }).then(r=>r.json()).then(j=>{
+    toastManager.hide(processingId);
+    if (!j.ok) { 
+      alert(`Failed: ${j.error||'unknown'}`); 
+      return; 
+    }
+    alert(`Maintenance successfully set to ${targetState}`);
+    if(typeof fetchRowsFromApi === 'function') fetchRowsFromApi();
+  }).catch((e)=>{
+    toastManager.hide(processingId);
+    console.error(e);
+    alert('Request failed');
+  });
+};
+
 // Task Item click handler (direct action)
 document.querySelectorAll('#ironicActions .task-item').forEach(item => {
   item.addEventListener('click', (e) => {

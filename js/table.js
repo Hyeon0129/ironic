@@ -18,6 +18,17 @@ function getHealthDisplay(health) {
   }
 }
 
+function getMaintenanceDisplay(r) {
+  const isMaint = r.maintenance;
+  const color = isMaint ? '#e34d42' : '#94A3B8';
+  const text = isMaint ? 'True' : 'False';
+  const action = isMaint ? 'false' : 'true';
+  return `<div style="display:flex; align-items:center; justify-content:center; gap:8px;">
+            <span style="color:${color}; font-weight:bold; min-width: 35px; text-align: left;">${text}</span>
+            <button style="appearance:none; border:1px solid rgba(255,255,255,.14); background:rgba(255,255,255,.06); color:#fff; padding:2px 6px; border-radius:4px; font-size:11px; cursor:pointer;" onclick="toggleMaintenance('${r.uuid}', ${action})">Toggle</button>
+          </div>`;
+}
+
 let state = {
   data: demoRows,
   filtered: demoRows.slice(),
@@ -76,12 +87,13 @@ function render(){
       <td>${r.bmc_ip || '-'}</td>
       <td>${r.provision_state || '-'}</td>
       <td>${r.uuid || '-'}</td>
+      <td>${getMaintenanceDisplay(r)}</td>
       <td>${getHealthDisplay(r.health)}</td>
     </tr>`;
   }).join("");
   
   const tbody = document.querySelector("#qcTable tbody");
-  if(tbody) tbody.innerHTML = rows || `<tr><td colspan="8" style="padding:24px; text-align:center; color:rgba(214,224,238,.7)">No data</td></tr>`;
+  if(tbody) tbody.innerHTML = rows || `<tr><td colspan="9" style="padding:24px; text-align:center; color:rgba(214,224,238,.7)">No data</td></tr>`;
 
   setupCheckboxEvents();
 
