@@ -117,10 +117,8 @@ def get_os_ip_batch_api(nodes):
             
             if not ips:
                 node_to_ips[nu] = "N / A"
-            elif len(ips) == 1:
-                node_to_ips[nu] = ips[0]
             else:
-                active_ip = ips[0]
+                active_ip = "N / A"
                 for ip in ips:
                     ping_out = subprocess.run(["ping", "-c", "1", "-W", "1", ip], capture_output=True)
                     if ping_out.returncode == 0:
@@ -159,9 +157,20 @@ def get_servers():
             
             err_msg = n.get("last_error") or n.get("fault") or ""
             if not err_msg and ("error" in prov.lower() or "failed" in prov.lower()):
-                err_msg = f"Node is in {prov} state"
+                try:
+                    node_r = requests.get(f"{IRONIC_BASE_URL}/nodes/{uuid}", headers=IRONIC_HEADERS)
+                    if node_r.ok:
+                        err_msg = node_r.json().get("last_error") or ""
+                except:
+                    pass
                 
-            is_error = bool(err_msg)
+                if not err_msg:
+                    err_msg = f"Node is in {prov} state"
+                
+            is_error = "error" in prov.lower() or "failed" in prov.lower() or bool(n.get("fault"))
+            if not is_error and err_msg and err_msg != f"Node is in {prov} state":
+                # Some states like 'available' might still have old last_error. We should only consider it an error if provision_state indicates it or fault is present.
+                pass
             
             rows.append({
                 "order": i,
