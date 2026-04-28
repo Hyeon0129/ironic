@@ -31,6 +31,21 @@ IRONIC_HEADERS = {
 CONTROLLER_IP = "192.168.240.1"
 IMAGE_PORT = "8080"
 HTTPBOOT_DIR = "/var/lib/ironic/httpboot/"
+REDFISH_CREDS_FILE = "/data/ironic/redfish_creds.json"
+
+def get_redfish_creds():
+    try:
+        with open(REDFISH_CREDS_FILE, "r") as f:
+            return json.load(f)
+    except:
+        return {}
+
+def save_redfish_creds(creds):
+    try:
+        with open(REDFISH_CREDS_FILE, "w") as f:
+            json.dump(creds, f)
+    except:
+        pass
 
 def get_file_checksum(file_name):
     """Get checksum and algo from local .sha256 or .md5 files."""
@@ -149,11 +164,33 @@ def get_servers():
         nodes = r.json().get("nodes", [])
         
         node_to_ips = get_os_ip_batch_api(nodes)
+        creds = get_redfish_creds()
         
         rows = []
+        import urllib3
+        urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+        
         for i, n in enumerate(nodes):
             uuid = n.get("uuid") or ""
             prov = n.get("provision_state") or ""
+            
+            power_state = n.get("power_state")
+            bmc_ip = get_bmc_ip(n)
+            
+            if not power_state and bmc_ip and bmc_ip != "N / A":
+                cred = creds.get(bmc_ip)
+                if cred:
+                    try:
+                        pr = requests.get(f"https://{bmc_ip}/redfish/v1/Systems/1", auth=(cred["username"], cred["password"]), verify=False, timeout=2)
+                        if pr.ok:
+                            rf_power = pr.json().get("PowerState")
+                            if rf_power:
+                                power_state = "power " + rf_power.lower()
+                    except:
+                        pass
+                        
+            if not power_state:
+                power_state = ""
             
             is_error = "error" in prov.lower() or "failed" in prov.lower()
             err_msg = ""
@@ -173,9 +210,9 @@ def get_servers():
             rows.append({
                 "order": i,
                 "name": n.get("name") or "",
-                "power": n.get("power_state") or "",
+                "power": power_state,
                 "os_ip": node_to_ips.get(uuid, "N / A"),
-                "bmc_ip": get_bmc_ip(n),
+                "bmc_ip": bmc_ip,
                 "provision_state": prov,
                 "uuid": uuid,
                 "maintenance": bool(n.get("maintenance")),
@@ -249,6 +286,7 @@ def perform_query(payload: QueryPayload):
         
         new_lines = [prefix]
         matched_count = 0
+        creds = get_redfish_creds()
         
         for i, line in enumerate(lines[1:]):
             parts = line.split()
@@ -291,10 +329,18 @@ def perform_query(payload: QueryPayload):
                     nr = requests.post(f"{IRONIC_BASE_URL}/nodes", headers=IRONIC_HEADERS, json=node_payload)
                     if nr.ok or nr.status_code == 409:
                         port_payload = {
-                            "node_uuid": node_name,
-                            "address": mac
+                            "node_ident": node_name,
+                            "address": mac,
+                            "pxe_enabled": True
                         }
-                        requests.post(f"{IRONIC_BASE_URL}/ports", headers=IRONIC_HEADERS, json=port_payload)
+                        port_headers = IRONIC_HEADERS.copy()
+                        port_headers["X-OpenStack-Ironic-API-Version"] = "1.94"
+                        requests.post(f"{IRONIC_BASE_URL}/ports", headers=port_headers, json=port_payload)
+                        
+                        creds[info['ip']] = {
+                            "username": payload.username,
+                            "password": payload.password
+                        }
                 except:
                     pass
             else:
@@ -303,6 +349,7 @@ def perform_query(payload: QueryPayload):
         with open(mac_list_path, "w") as f:
             f.write("\n".join(new_lines) + "\n")
             
+        save_redfish_creds(creds)
         return {"ok": True, "matched_count": matched_count}
     except Exception as e:
         return {"ok": False, "error": str(e)}
@@ -376,6 +423,33 @@ def perform_action(payload: ActionPayload):
                 results[uuid] = handle_ironic_response(r)
             elif payload.action == "delete-node":
                 url = f"{IRONIC_BASE_URL}/nodes/{uuid}"
+                
+                # Fetch bmc_ip to remove credentials if they exist
+                try:
+                    node_r = requests.get(url, headers=IRONIC_HEADERS)
+                    if node_r.ok:
+                        node_data = node_r.json()
+                        bmc_ip = get_bmc_ip(node_data)
+                        if bmc_ip and bmc_ip != "N / A":
+                            creds = get_redfish_creds()
+                            if bmc_ip in creds:
+                                del creds[bmc_ip]
+                                save_redfish_creds(creds)
+                except:
+                    pass
+                
+                # Fetch ports to remove dnsmasq entries
+                try:
+                    ports_r = requests.get(f"{url}/ports", headers=IRONIC_HEADERS)
+                    if ports_r.ok:
+                        for p in ports_r.json().get("ports", []):
+                            mac = p.get("address")
+                            if mac:
+                                dnsmasq_file = f"/etc/dnsmasq.d/ironic-hosts.d/{mac.lower()}"
+                                subprocess.run(f"sudo rm -f {dnsmasq_file}", shell=True)
+                except:
+                    pass
+                
                 r = requests.delete(url, headers=IRONIC_HEADERS)
                 results[uuid] = handle_ironic_response(r)
             else:
@@ -492,6 +566,9 @@ class RedfishPayload(BaseModel):
 @app.post("/api/redfish")
 def update_redfish(payload: RedfishPayload):
     results = {}
+    creds = get_redfish_creds()
+    clean_ip = payload.address.replace('https://', '').replace('http://', '').strip()
+    
     for uuid in payload.uuids:
         try:
             patch_data = [
@@ -504,7 +581,7 @@ def update_redfish(payload: RedfishPayload):
                     "op": "replace",
                     "path": "/driver_info",
                     "value": {
-                        "redfish_address": f"https://{payload.address.replace('https://', '').replace('http://', '')}",
+                        "redfish_address": f"https://{clean_ip}",
                         "redfish_username": payload.username,
                         "redfish_password": payload.password,
                         "redfish_system_id": "/redfish/v1/Systems/1",
@@ -554,10 +631,17 @@ def update_redfish(payload: RedfishPayload):
             ]
             
             r = requests.patch(f"{IRONIC_BASE_URL}/nodes/{uuid}", headers=IRONIC_HEADERS, json=patch_data)
-            results[uuid] = handle_ironic_response(r)
+            resp = handle_ironic_response(r)
+            results[uuid] = resp
+            if resp.get("ok"):
+                creds[clean_ip] = {
+                    "username": payload.username,
+                    "password": payload.password
+                }
         except Exception as e:
             results[uuid] = {"ok": False, "error": str(e)}
             
+    save_redfish_creds(creds)
     return {"ok": True, "results": results}
 
 class RenamePayload(BaseModel):

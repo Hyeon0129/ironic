@@ -123,9 +123,6 @@ function setupCheckboxEvents() {
     
     newSelectAll.addEventListener("change", (e) => {
       const isChecked = e.target.checked;
-      if (!isChecked) {
-        selectedServers.clear();
-      }
       
       document.querySelectorAll(".row-checkbox").forEach((checkbox) => {
         checkbox.checked = isChecked;
@@ -137,6 +134,7 @@ function setupCheckboxEvents() {
           selectedServers.add(uuid);
         } else {
           row.classList.remove("selected");
+          if (uuid) selectedServers.delete(uuid);
         }
       });
       console.log("Selected Node IDs for action:", Array.from(selectedServers));

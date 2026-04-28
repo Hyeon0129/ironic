@@ -94,10 +94,6 @@
           <i class="bi bi-pencil-square"></i> 
           <span class="name">Rename Node</span>
         </div>
-        <div class="chat task-item" data-action="redfish-manager">
-          <i class="bi bi-hdd-network"></i> 
-          <span class="name">Redfish Manager</span>
-        </div>
         <div class="chat task-item" data-action="raid-manager">
           <i class="bi bi-device-hdd"></i> 
           <span class="name">RAID Configuration</span>
@@ -237,31 +233,6 @@
       </div>
     </div>
 
-    <!-- Redfish Manager Modal -->
-    <div class="task-modal" id="redfishManagerModal">
-      <div class="task-panel">
-        <div class="task-header">Redfish Manager</div>
-        <div class="task-form">
-          <div class="task-field">
-            <label class="task-label">Address (e.g. 192.168.222.248)</label>
-            <input type="text" id="redfishAddress" class="qc-input" placeholder="Address">
-          </div>
-          <div class="task-field" style="margin-top: 15px;">
-            <label class="task-label">Username</label>
-            <input type="text" id="redfishUsername" class="qc-input" placeholder="Username" value="ADMIN">
-          </div>
-          <div class="task-field" style="margin-top: 15px;">
-            <label class="task-label">Password</label>
-            <input type="password" id="redfishPassword" class="qc-input" placeholder="Password">
-          </div>
-          <div class="task-buttons" style="margin-top: 25px;">
-            <button class="task-btn task-btn-cancel" onclick="closeTaskModal('redfishManagerModal')">Cancel</button>
-            <button class="task-btn task-btn-execute" onclick="executeRedfish()">Save</button>
-          </div>
-        </div>
-      </div>
-    </div>
-
     <!-- RAID Manager Modal -->
     <div class="task-modal" id="raidManagerModal">
       <div class="task-panel">
@@ -334,9 +305,9 @@
   <!-- Toast Container for Notifications -->
   <div id="toastContainer" class="toast-container"></div>
 
-  <script src="js/main.js?v=22"></script>
-  <script src="js/table.js?v=22"></script>
-  <script src="js/actions.js?v=22"></script>
+  <script src="js/main.js?v=24"></script>
+  <script src="js/table.js?v=24"></script>
+  <script src="js/actions.js?v=24"></script>
   <script>
     async function refreshStats(){
       try{

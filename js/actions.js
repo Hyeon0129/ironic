@@ -30,11 +30,6 @@ function executeIronicAction(action) {
     return;
   }
 
-  if (action === 'redfish-manager') {
-    openTaskModal('redfishManagerModal');
-    return;
-  }
-
   if (action === 'raid-manager') {
     openTaskModal('raidManagerModal');
     return;
@@ -75,6 +70,7 @@ function executeIronicAction(action) {
       alert(`Action '${action}' completed with mixed results.\nSuccess: ${successCount}/${selected.length}\nErrors:\n${errors.join('\n')}`);
     } else {
       alert(`Action '${action}' successfully initiated for ${successCount}/${selected.length} servers.`);
+      selectedServers.clear();
     }
     
     if(typeof fetchRowsFromApi === 'function') {
@@ -140,6 +136,7 @@ function executeDeploy() {
       alert(`Deploy initiated for ${successCount}/${selected.length} servers.\nErrors:\n${errors.join('\n')}`);
     } else {
       alert(`Deploy successfully initiated for ${successCount}/${selected.length} servers.`);
+      selectedServers.clear();
     }
     if(typeof fetchRowsFromApi === 'function') fetchRowsFromApi();
   }).catch((e)=>{
@@ -150,60 +147,6 @@ function executeDeploy() {
 }
 
 window.executeDeploy = executeDeploy;
-
-function executeRedfish() {
-  const address = document.getElementById('redfishAddress').value;
-  const username = document.getElementById('redfishUsername').value;
-  const password = document.getElementById('redfishPassword').value;
-  const selected = Array.from(selectedServers);
-  
-  if (!address || !username || !password) {
-    alert('Please fill out Address, Username, and Password.');
-    return;
-  }
-  
-  closeTaskModal('redfishManagerModal');
-  const processingId = toastManager.show('Updating Redfish info...', 'info', 'Redfish', 0);
-  
-  fetch(`${API_BASE}/api/redfish`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ 
-      uuids: selected, 
-      address: address, 
-      username: username, 
-      password: password 
-    })
-  }).then(r=>r.json()).then(j=>{
-    toastManager.hide(processingId);
-    if (!j.ok) { 
-      alert(`Failed: ${j.error||'unknown'}`); 
-      return; 
-    }
-    let successCount = 0;
-    let errors = [];
-    for(let uuid in j.results) {
-      if(j.results[uuid].ok) {
-        successCount++;
-      } else {
-        errors.push(`[${uuid}] ${j.results[uuid].error}`);
-      }
-    }
-    if (errors.length > 0) {
-      alert(`Redfish update initiated for ${successCount}/${selected.length} servers.\nErrors:\n${errors.join('\n')}`);
-    } else {
-      alert(`Redfish info successfully updated for ${successCount}/${selected.length} servers.`);
-      document.getElementById('redfishAddress').value = '';
-      document.getElementById('redfishPassword').value = '';
-    }
-    if(typeof fetchRowsFromApi === 'function') fetchRowsFromApi();
-  }).catch((e)=>{
-    toastManager.hide(processingId);
-    console.error(e);
-    alert('Request failed');
-  });
-}
-window.executeRedfish = executeRedfish;
 
 function executeRaid(type) {
   const selected = Array.from(selectedServers);
@@ -240,6 +183,7 @@ function executeRaid(type) {
       alert(`RAID '${type}' completed with mixed results.\nSuccess: ${successCount}/${selected.length}\nErrors:\n${errors.join('\n')}`);
     } else {
       alert(`RAID '${type}' successfully initiated for ${successCount}/${selected.length} servers.`);
+      selectedServers.clear();
     }
     if(typeof fetchRowsFromApi === 'function') fetchRowsFromApi();
   }).catch((e)=>{
@@ -297,6 +241,7 @@ window.toggleMaintenance = function(uuid, targetState) {
       return; 
     }
     alert(`Maintenance successfully set to ${targetState}`);
+    selectedServers.clear();
     if(typeof fetchRowsFromApi === 'function') fetchRowsFromApi();
   }).catch((e)=>{
     toastManager.hide(processingId);
@@ -329,6 +274,7 @@ document.querySelectorAll('#ironicActions .task-item').forEach(item => {
         toastManager.hide(processingId);
         if (!j.ok) { alert(`Failed: ${j.error}`); return; }
         alert('Node renamed successfully');
+        selectedServers.clear();
         if(typeof fetchRowsFromApi === 'function') fetchRowsFromApi();
       }).catch(()=>{
         toastManager.hide(processingId);
