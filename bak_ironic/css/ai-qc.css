@@ -1,0 +1,319 @@
+
+.ai-qc-content {
+position: absolute;
+inset: 0;
+display: flex;
+align-items: center;
+justify-content: center;
+padding: 40px;
+z-index: 100;
+}
+
+.ai-qc-modal-card {
+width: 100%;
+max-width: 1200px;
+height: 80vh;
+background: var(--card-bg);
+backdrop-filter: blur(16px);
+-webkit-backdrop-filter: blur(16px);
+border: 1px solid var(--card-border);
+border-radius: 16px;
+display: flex;
+overflow: hidden;
+box-shadow: 0 20px 60px rgba(0,0,0,.4), inset 0 1px 0 rgba(255,255,255,.1);
+}
+
+[data-theme="light"] .ai-qc-modal-card {
+background: var(--card-bg);
+backdrop-filter: blur(18px);
+-webkit-backdrop-filter: blur(18px);
+box-shadow: 0 12px 36px rgba(0,0,0,.10), inset 0 1px 0 rgba(255,255,255,.18);
+border: 1px solid var(--card-border);
+}
+
+.ai-qc-sidebar {
+width: 300px;
+background: rgba(0,0,0,.15);
+backdrop-filter: blur(12px);
+-webkit-backdrop-filter: blur(12px);
+border-right: 1px solid var(--card-border);
+padding: 24px;
+display: flex;
+flex-direction: column;
+gap: 20px;
+}
+
+[data-theme="light"] .ai-qc-sidebar {
+background: var(--card-bg);
+backdrop-filter: blur(14px);
+-webkit-backdrop-filter: blur(14px);
+box-shadow: inset 0 1px 0 rgba(255,255,255,.15);
+border-right: 1px solid var(--card-border);
+}
+
+.ai-qc-steps-header {
+display: flex;
+justify-content: space-between;
+align-items: center;
+padding-bottom: 16px;
+border-bottom: 1px solid rgba(255,255,255,.08);
+}
+
+.ai-qc-steps-header h3 {
+color: var(--ink-1);
+font-size: 16px;
+font-weight: 600;
+margin: 0;
+}
+
+.ai-qc-timer {
+background: rgba(255,255,255,.05);
+padding: 6px 12px;
+border-radius: 8px;
+border: 1px solid rgba(255,255,255,.08);
+}
+
+.ai-qc-timer span {
+color: var(--ink-2);
+font-family: 'Courier New', monospace;
+font-size: 14px;
+font-weight: 600;
+}
+
+.ai-qc-main-content {
+flex: 1;
+display: flex;
+flex-direction: column;
+padding: 24px;
+}
+
+.ai-qc-header {
+display: flex;
+justify-content: space-between;
+align-items: center;
+margin-bottom: 24px;
+padding-bottom: 16px;
+border-bottom: 1px solid rgba(255,255,255,.08);
+}
+
+.ai-qc-header h2 {
+color: var(--ink-1);
+font-size: 24px;
+font-weight: 700;
+margin: 0;
+}
+
+.ai-qc-status-text {
+color: var(--ink-2);
+font-size: 14px;
+font-weight: 500;
+padding: 6px 12px;
+background: rgba(255,255,255,.05);
+border-radius: 8px;
+border: 1px solid rgba(255,255,255,.08);
+}
+
+.ai-qc-log-container {
+flex: 1;
+background: var(--card-bg);
+backdrop-filter: blur(12px);
+-webkit-backdrop-filter: blur(12px);
+border: 1px solid var(--card-border);
+border-radius: 12px;
+padding: 20px;
+overflow: hidden;
+display: flex;
+flex-direction: column;
+box-shadow: 0 8px 24px rgba(0,0,0,.15), inset 0 1px 0 rgba(255,255,255,.1);
+}
+
+[data-theme="light"] .ai-qc-log-container {
+background: var(--card-bg);
+backdrop-filter: blur(12px);
+-webkit-backdrop-filter: blur(12px);
+box-shadow: 0 8px 24px rgba(0,0,0,.08), inset 0 1px 0 rgba(255,255,255,.2);
+border: 1px solid var(--card-border);
+}
+
+.ai-qc-welcome {
+display: flex;
+flex-direction: column;
+align-items: center;
+justify-content: center;
+height: 100%;
+text-align: center;
+gap: 20px;
+}
+
+.ai-qc-welcome-icon {
+width: 80px;
+height: 80px;
+background: linear-gradient(135deg, rgba(120,177,255,.2), rgba(165,141,255,.15));
+border: 2px solid rgba(120,177,255,.3);
+border-radius: 50%;
+display: flex;
+align-items: center;
+justify-content: center;
+}
+
+.ai-qc-welcome-icon svg {
+width: 40px;
+height: 40px;
+stroke: rgba(120,177,255,.8);
+}
+
+.ai-qc-welcome h3 {
+color: var(--ink-1);
+font-size: 20px;
+font-weight: 600;
+margin: 0;
+}
+
+.ai-qc-welcome p {
+color: var(--ink-2);
+font-size: 14px;
+margin: 0;
+}
+
+.ai-qc-start-btn {
+background: linear-gradient(135deg, rgba(120,177,255,.8), rgba(165,141,255,.6));
+border: 1px solid rgba(120,177,255,.5);
+color: white;
+padding: 12px 24px;
+border-radius: 10px;
+font-size: 14px;
+font-weight: 600;
+cursor: pointer;
+transition: all 0.3s;
+box-shadow: 0 4px 16px rgba(120,177,255,.3);
+}
+
+.ai-qc-start-btn:hover {
+background: linear-gradient(135deg, rgba(120,177,255,.9), rgba(165,141,255,.7));
+transform: translateY(-2px);
+box-shadow: 0 8px 24px rgba(120,177,255,.4);
+}
+
+/* AI QC 사이드바 스타일 */
+.ai-qc-step {
+display: flex;
+align-items: center;
+gap: 12px;
+padding: 12px;
+border-radius: 8px;
+margin-bottom: 8px;
+transition: all 0.3s;
+border: 1px solid transparent;
+}
+
+.ai-qc-step.running {
+background: rgba(245,158,11,.1);
+border-color: rgba(245,158,11,.3);
+}
+
+.ai-qc-step.completed {
+background: rgba(16,185,129,.1);
+border-color: rgba(16,185,129,.3);
+}
+
+.step-indicator {
+width: 32px;
+height: 32px;
+border-radius: 50%;
+background: rgba(255,255,255,.05);
+border: 2px solid rgba(255,255,255,.1);
+display: flex;
+align-items: center;
+justify-content: center;
+position: relative;
+flex-shrink: 0;
+}
+
+.ai-qc-step.running .step-indicator {
+border-color: rgba(245,158,11,.5);
+background: rgba(245,158,11,.1);
+}
+
+.ai-qc-step.completed .step-indicator {
+border-color: rgba(16,185,129,.5);
+background: rgba(16,185,129,.1);
+}
+
+.step-number {
+color: var(--ink-2);
+font-size: 12px;
+font-weight: 600;
+}
+
+.step-spinner {
+position: absolute;
+width: 20px;
+height: 20px;
+border: 2px solid rgba(245,158,11,.3);
+border-top: 2px solid rgba(245,158,11,.8);
+border-radius: 50%;
+animation: spin 1s linear infinite;
+display: none;
+}
+
+.step-check {
+position: absolute;
+color: rgba(16,185,129,.8);
+font-size: 14px;
+font-weight: bold;
+display: none;
+}
+
+.ai-qc-step.running .step-number {
+display: none;
+}
+
+.ai-qc-step.running .step-spinner {
+display: block;
+}
+
+.ai-qc-step.completed .step-number {
+display: none;
+}
+
+.ai-qc-step.completed .step-check {
+display: block;
+}
+
+.step-info {
+flex: 1;
+min-width: 0;
+}
+
+.step-name {
+color: var(--ink-1);
+font-size: 13px;
+font-weight: 600;
+margin-bottom: 2px;
+white-space: nowrap;
+overflow: hidden;
+text-overflow: ellipsis;
+}
+
+.step-desc {
+color: var(--ink-3);
+font-size: 11px;
+line-height: 1.3;
+white-space: nowrap;
+overflow: hidden;
+text-overflow: ellipsis;
+}
+
+@media (max-width: 768px) {
+.ai-qc-modal-card {
+  flex-direction: column;
+  height: 90vh;
+}
+
+.ai-qc-sidebar {
+  width: 100%;
+  height: auto;
+  border-right: none;
+  border-bottom: 1px solid var(--card-border);
+}
+}

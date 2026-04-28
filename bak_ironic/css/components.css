@@ -1,0 +1,439 @@
+
+.qc-panel{
+background: radial-gradient(120% 120% at 50% -10%, rgba(255,255,255,.06), rgba(0,0,0,.30));
+backdrop-filter: blur(8px);
+-webkit-backdrop-filter: blur(8px);
+border: 1px solid rgba(255,255,255,.12);
+box-shadow: 0 20px 60px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.04);
+border-radius: 14px;
+padding: 18px 18px 14px;
+}
+
+/* header */
+.qc-head{
+display:flex; 
+align-items:center; 
+gap:20px;
+padding: 6px 6px 2px;
+justify-content: flex-start;
+}
+
+.qc-title{
+font-size:18px; font-weight:700; letter-spacing:.2px;
+color: rgba(238,242,250,.96);
+margin-right: 8px;
+}
+
+.qc-actions{ 
+display:flex; 
+gap:8px; 
+}
+
+/* 고급 버튼 스타일 - QC 테마 */
+.qc-btn{
+appearance:none; 
+border: 1px solid rgba(120,177,255,.2);
+background: linear-gradient(135deg, 
+  rgba(78,130,255,.12) 0%,
+  rgba(165,141,255,.08) 50%,
+  rgba(120,177,255,.15) 100%);
+backdrop-filter: blur(12px);
+-webkit-backdrop-filter: blur(12px);
+color: rgba(238,242,250,.95);
+font-weight:600; 
+font-size:13px; 
+letter-spacing:.3px;
+padding:10px 18px; 
+border-radius:12px; 
+cursor:pointer;
+position: relative;
+overflow: hidden;
+transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+box-shadow: 
+  0 4px 16px rgba(78,130,255,.1),
+  inset 0 1px 0 rgba(255,255,255,.1),
+  0 0 0 1px rgba(120,177,255,.05);
+}
+
+.qc-btn::before {
+content: "";
+position: absolute;
+top: 0;
+left: -100%;
+width: 100%;
+height: 100%;
+background: linear-gradient(90deg, 
+  transparent, 
+  rgba(120,177,255,.2), 
+  rgba(165,141,255,.15),
+  rgba(120,177,255,.2),
+  transparent);
+transition: left 0.5s ease;
+}
+
+.qc-btn:hover { 
+background: linear-gradient(135deg, 
+  rgba(78,130,255,.18) 0%,
+  rgba(165,141,255,.12) 50%,
+  rgba(120,177,255,.22) 100%);
+border-color: rgba(120,177,255,.35);
+transform: translateY(-2px);
+box-shadow: 
+  0 8px 24px rgba(78,130,255,.2),
+  inset 0 1px 0 rgba(255,255,255,.15),
+  0 0 0 1px rgba(120,177,255,.1),
+  0 0 20px rgba(165,141,255,.15);
+color: rgba(255,255,255,.98);
+}
+
+.qc-btn:hover::before {
+left: 100%;
+}
+
+.qc-btn:active { 
+transform: translateY(-1px);
+box-shadow: 
+  0 4px 12px rgba(78,130,255,.25),
+  inset 0 2px 4px rgba(0,0,0,.1);
+}
+
+/* 특별한 버튼 스타일 */
+.qc-btn.primary {
+background: linear-gradient(135deg, rgba(78,130,255,.15), rgba(165,141,255,.10));
+border-color: rgba(120,177,255,.25);
+}
+
+.qc-btn.primary:hover {
+background: linear-gradient(135deg, rgba(78,130,255,.25), rgba(165,141,255,.15));
+border-color: rgba(120,177,255,.35);
+}
+
+/* toolbar (left: rows selector / right: search) */
+.qc-toolbar{
+display:flex; 
+align-items:center; 
+justify-content:space-between; 
+gap:12px;
+padding: 12px 6px;
+color: rgba(214,224,238,.86);
+font-size:13px;
+}
+
+.qc-toolbar-left {
+display: flex;
+align-items: center;
+gap: 8px;
+font-size: 13px;
+}
+
+.qc-toolbar-center {
+flex: 1;
+display: flex;
+justify-content: center;
+}
+
+/* 고급 셀렉트 스타일 */
+.qc-select-wrapper {
+position: relative;
+display: inline-block;
+}
+
+.qc-select{
+appearance:none; -webkit-appearance:none; -moz-appearance:none;
+background: linear-gradient(135deg, rgba(255,255,255,.05), rgba(0,0,0,.25));
+color: rgba(238,242,250,.96);
+border:1px solid rgba(255,255,255,.10);
+border-radius:8px; 
+padding:6px 28px 6px 10px; 
+cursor:pointer;
+font-size: 13px;
+font-weight: 500;
+transition: all 0.2s;
+min-width: 60px;
+height: 32px;
+}
+
+.qc-select:hover {
+background: linear-gradient(135deg, rgba(255,255,255,.08), rgba(0,0,0,.20));
+border-color: rgba(255,255,255,.14);
+}
+
+.qc-select:focus {
+outline: none;
+border-color: rgba(120,177,255,.35);
+box-shadow: 0 0 0 2px rgba(120,177,255,.1);
+}
+
+/* 드롭다운 옵션 스타일링 */
+.qc-select option {
+background: rgba(24,28,35,.95);
+color: rgba(238,242,250,.96);
+border: none;
+padding: 8px 12px;
+}
+
+.qc-select option:hover,
+.qc-select option:checked {
+background: rgba(78,130,255,.2);
+color: rgba(238,242,250,1);
+}
+
+.qc-select-arrow {
+position: absolute;
+right: 8px;
+top: 50%;
+transform: translateY(-50%);
+pointer-events: none;
+transition: transform 0.2s;
+}
+
+.qc-select-arrow svg {
+width: 12px;
+height: 12px;
+stroke: rgba(238,242,250,.7);
+}
+
+.qc-select:focus ~ .qc-select-arrow {
+transform: translateY(-50%) rotate(180deg);
+}
+
+/* header 수정 - 검색바를 헤더로 이동 */
+.qc-head{
+display:flex; 
+align-items:center; 
+justify-content:space-between;
+gap:20px;
+padding: 6px 6px 2px;
+}
+
+.qc-head-left {
+display: flex;
+align-items: center;
+gap: 20px;
+}
+
+.qc-title{
+font-size:18px; font-weight:700; letter-spacing:.2px;
+color: rgba(238,242,250,.96);
+}
+
+.qc-actions{ 
+display:flex; 
+gap:8px; 
+}
+
+/* 검색 입력을 헤더용으로 스타일 조정 */
+.qc-input-header{
+width: 280px; 
+max-width: 100%;
+background: linear-gradient(135deg, rgba(255,255,255,.04), rgba(0,0,0,.25));
+color: rgba(238,242,250,.96);
+border:1px solid rgba(255,255,255,.10);
+border-radius:10px; 
+padding:8px 12px;
+font-size: 13px;
+transition: all 0.2s;
+height: 36px;
+}
+
+.qc-input-header:hover {
+background: linear-gradient(135deg, rgba(255,255,255,.06), rgba(0,0,0,.20));
+border-color: rgba(255,255,255,.12);
+}
+
+.qc-input-header:focus {
+outline: none;
+border-color: rgba(120,177,255,.35);
+box-shadow: 0 0 0 3px rgba(120,177,255,.1);
+background: rgba(0,0,0,.35);
+}
+
+.qc-input-header::placeholder{ 
+color: rgba(184,194,210,.5); 
+}
+
+/* toolbar 수정 - 왼쪽 정렬로 변경 */
+.qc-toolbar{
+display:flex; 
+align-items:center; 
+justify-content:flex-start;
+gap:12px;
+padding: 12px 6px;
+color: rgba(214,224,238,.86);
+font-size:13px;
+}
+
+.qc-toolbar-left {
+display: flex;
+align-items: center;
+gap: 8px;
+font-size: 13px;
+}
+
+/* 고급 스피너 스타일 */
+.status-spinner {
+display: inline-flex;
+align-items: center;
+justify-content: center;
+width: 20px;
+height: 20px;
+position: relative;
+}
+
+/* Classic Spinner - 속도 조정 */
+.spinner {
+width: 16px;
+height: 16px;
+border: 2px solid rgba(255,255,255,.1);
+border-top: 2px solid rgba(78,130,255,.8);
+border-radius: 50%;
+animation: spin 1.3s linear infinite; /* 15% 빠르게 */
+position: relative;
+}
+
+.spinner::before {
+content: "";
+position: absolute;
+top: -2px;
+left: -2px;
+right: -2px;
+bottom: -2px;
+border: 1px solid transparent;
+border-top: 1px solid rgba(165,141,255,.6);
+border-radius: 50%;
+animation: spin-reverse 1.74s linear infinite; /* 15% 빠르게 */
+}
+
+.spinner::after {
+content: "";
+position: absolute;
+top: 2px;
+left: 2px;
+right: 2px;
+bottom: 2px;
+background: radial-gradient(circle, rgba(78,130,255,.2) 0%, transparent 70%);
+border-radius: 50%;
+animation: pulse 2s ease-in-out infinite;
+}
+
+/* Health Check Dots Spinner */
+.health-spinner {
+display: inline-flex;
+gap: 2px;
+align-items: center;
+}
+
+.health-spinner .dot {
+width: 4px;
+height: 4px;
+background: rgba(78,130,255,.8);
+border-radius: 50%;
+animation: health-bounce 1.4s ease-in-out infinite both;
+box-shadow: 0 0 4px rgba(78,130,255,.4);
+}
+
+.health-spinner .dot:nth-child(1) { animation-delay: -0.32s; }
+.health-spinner .dot:nth-child(2) { animation-delay: -0.16s; }
+.health-spinner .dot:nth-child(3) { animation-delay: 0s; }
+
+/* 완료 상태 아이콘 */
+.status-complete {
+display: inline-flex;
+align-items: center;
+justify-content: center;
+width: 18px;
+height: 18px;
+background: linear-gradient(135deg, rgba(111,210,127,.9), rgba(72,187,120,.8));
+border-radius: 50%;
+position: relative;
+box-shadow: 0 0 8px rgba(111,210,127,.4);
+animation: complete-pulse 2s ease-in-out infinite;
+}
+
+.status-complete::after {
+content: "✓";
+color: white;
+font-size: 11px;
+font-weight: bold;
+text-shadow: 0 0 2px rgba(0,0,0,.3);
+}
+
+/* 실패 상태 아이콘 */
+.status-fail {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 35%, rgba(255, 90, 90, .9), rgba(200, 0, 0, .85) 60%, rgba(120, 0, 0, .8) 100%);
+  box-shadow: 0 0 10px rgba(255, 40, 40, .45), inset 0 2px 4px rgba(255,255,255,.08), inset 0 -2px 6px rgba(0,0,0,.35);
+  position: relative;
+}
+
+.status-fail::before {
+  content: "";
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  right: 2px;
+  bottom: 2px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 30% 30%, rgba(255,255,255,.15), transparent 55%);
+}
+
+.status-fail::after {
+  content: "!";
+  color: white;
+  font-weight: 800;
+  font-size: 11px;
+  text-shadow: 0 0 2px rgba(0,0,0,.45);
+}
+
+/* Health 상태별 아이콘 수정 - 문제 있을 때는 모두 번개 표시 */
+
+/* 문제 있을 때는 모두 번개 표시 (warning, error, critical 모두 동일) */
+.health-warning,
+.health-error,
+.health-critical {
+display: inline-flex;
+align-items: center;
+justify-content: center;
+width: 18px;
+height: 18px;
+background: linear-gradient(135deg, rgba(220,53,69,.9), rgba(183,28,28,.8));
+border-radius: 50%;
+box-shadow: 0 0 12px rgba(220,53,69,.6);
+animation: critical-flash 0.6s ease-in-out infinite;
+position: relative;
+}
+
+.health-warning::before,
+.health-error::before,
+.health-critical::before {
+content: "";
+position: absolute;
+width: 100%;
+height: 100%;
+border-radius: 50%;
+background: linear-gradient(135deg, rgba(220,53,69,.3), rgba(183,28,28,.2));
+animation: critical-ring 1.5s ease-out infinite;
+z-index: -1;
+}
+
+.health-warning::after,
+.health-error::after,
+.health-critical::after {
+content: "⚡";
+color: white;
+font-size: 9px;
+font-weight: bold;
+text-shadow: 0 0 2px rgba(0,0,0,.4);
+}
+
+/* Show/entries 텍스트 스타일 통일 */
+.qc-toolbar-left span {
+font-size: 13px;
+color: rgba(214,224,238,.86);
+font-weight: 500;
+}
