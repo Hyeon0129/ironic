@@ -186,6 +186,127 @@ def get_servers():
     except Exception as e:
         return {"rows": [], "error": str(e)}
 
+class QueryPayload(BaseModel):
+    username: str
+    password: str
+
+@app.post("/api/query")
+def perform_query(payload: QueryPayload):
+    import concurrent.futures
+    import urllib3
+    urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+    
+    try:
+        out = subprocess.run(["nmap", "-p", "623", "--open", "192.168.222.0/24"], capture_output=True, text=True)
+        ips = []
+        for line in out.stdout.splitlines():
+            if "Nmap scan report for" in line:
+                ip = line.split()[-1].strip("()")
+                ips.append(ip)
+        
+        results = []
+        def check_ip(ip):
+            try:
+                r = requests.get(f"https://{ip}/redfish/v1/Systems/1", auth=(payload.username, payload.password), verify=False, timeout=5)
+                if r.status_code == 200:
+                    data = r.json()
+                    serial = data.get("SerialNumber")
+                    if serial:
+                        eth_r = requests.get(f"https://{ip}/redfish/v1/Systems/1/EthernetInterfaces", auth=(payload.username, payload.password), verify=False, timeout=5)
+                        if eth_r.status_code == 200:
+                            eth_data = eth_r.json()
+                            members = eth_data.get("Members", [])
+                            if members:
+                                eth_url = members[0].get("@odata.id")
+                                if eth_url:
+                                    mac_r = requests.get(f"https://{ip}{eth_url}", auth=(payload.username, payload.password), verify=False, timeout=5)
+                                    if mac_r.status_code == 200:
+                                        mac = mac_r.json().get("MACAddress")
+                                        if mac:
+                                            return {"ip": ip, "serial": serial.strip(), "mac": mac.strip()}
+            except:
+                pass
+            return None
+
+        with concurrent.futures.ThreadPoolExecutor(max_workers=10) as executor:
+            futures = [executor.submit(check_ip, ip) for ip in ips]
+            for f in concurrent.futures.as_completed(futures):
+                res = f.result()
+                if res:
+                    results.append(res)
+                    
+        mac_list_path = "/data/ironic/mac_list.txt"
+        with open(mac_list_path, "r") as f:
+            lines = f.read().splitlines()
+            
+        if not lines or not (lines[0].startswith("[") and lines[0].endswith("]")):
+            return {"ok": False, "error": "Invalid mac_list.txt format"}
+            
+        prefix = lines[0]
+        prefix_val = prefix.strip("[]")
+        
+        serial_to_info = {item["serial"]: item for item in results}
+        
+        new_lines = [prefix]
+        matched_count = 0
+        
+        for i, line in enumerate(lines[1:]):
+            parts = line.split()
+            if not parts:
+                continue
+            serial = parts[0]
+            info = serial_to_info.get(serial)
+            
+            if info:
+                new_line = f"{serial} {info['ip']} {info['mac']}"
+                new_lines.append(new_line)
+                matched_count += 1
+                
+                mac = info['mac'].lower()
+                dnsmasq_file = f"/etc/dnsmasq.d/ironic-hosts.d/{mac}"
+                subprocess.run(f"sudo mkdir -p /etc/dnsmasq.d/ironic-hosts.d && echo '{mac},set:allow_me' | sudo tee {dnsmasq_file}", shell=True)
+                
+                node_name = f"{prefix_val}-{i+1:03d}"
+                node_payload = {
+                    "name": node_name,
+                    "driver": "redfish",
+                    "driver_info": {
+                      "redfish_address": f"https://{info['ip']}",
+                      "redfish_username": payload.username,
+                      "redfish_password": payload.password,
+                      "redfish_system_id": "/redfish/v1/Systems/1",
+                      "redfish_verify_ca": False
+                    },
+                    "bios_interface": "redfish",
+                    "boot_interface": "redfish-virtual-media",
+                    "deploy_interface": "direct",
+                    "inspect_interface": "agent",
+                    "management_interface": "redfish",
+                    "power_interface": "redfish",
+                    "raid_interface": "agent",
+                    "vendor_interface": "no-vendor"
+                }
+                
+                try:
+                    nr = requests.post(f"{IRONIC_BASE_URL}/nodes", headers=IRONIC_HEADERS, json=node_payload)
+                    if nr.ok or nr.status_code == 409:
+                        port_payload = {
+                            "node_uuid": node_name,
+                            "address": mac
+                        }
+                        requests.post(f"{IRONIC_BASE_URL}/ports", headers=IRONIC_HEADERS, json=port_payload)
+                except:
+                    pass
+            else:
+                new_lines.append(line)
+                
+        with open(mac_list_path, "w") as f:
+            f.write("\n".join(new_lines) + "\n")
+            
+        return {"ok": True, "matched_count": matched_count}
+    except Exception as e:
+        return {"ok": False, "error": str(e)}
+
 class MaintenancePayload(BaseModel):
     uuid: str
     maintenance: bool
@@ -252,6 +373,10 @@ def perform_action(payload: ActionPayload):
             elif payload.action == "undeploy":
                 url = f"{IRONIC_BASE_URL}/nodes/{uuid}/states/provision"
                 r = requests.put(url, headers=IRONIC_HEADERS, json={"target": "deleted"})
+                results[uuid] = handle_ironic_response(r)
+            elif payload.action == "delete-node":
+                url = f"{IRONIC_BASE_URL}/nodes/{uuid}"
+                r = requests.delete(url, headers=IRONIC_HEADERS)
                 results[uuid] = handle_ironic_response(r)
             else:
                 results[uuid] = {"ok": False, "error": "Unsupported action"}

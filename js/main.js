@@ -197,7 +197,6 @@ function updateAlarmSystem() {
           <div class="alarm-item-icon"></div>
           <div class="alarm-item-content">
             <div class="alarm-item-title">${issue.name || issue.uuid} - Error</div>
-            <div class="alarm-item-desc" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${issue.last_error || 'Unknown error'}</div>
           </div>
         </div>
       `).join('');

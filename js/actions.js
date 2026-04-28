@@ -250,6 +250,37 @@ function executeRaid(type) {
 }
 window.executeRaid = executeRaid;
 
+window.executeQuery = function() {
+  const username = document.getElementById('queryUsername').value;
+  const password = document.getElementById('queryPassword').value;
+  
+  if (!username || !password) {
+    alert('Please fill out Username and Password.');
+    return;
+  }
+  
+  closeTaskModal('queryModal');
+  const processingId = toastManager.show('Querying nodes...', 'info', 'Query', 0);
+  
+  fetch(`${API_BASE}/api/query`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ username: username, password: password })
+  }).then(r=>r.json()).then(j=>{
+    toastManager.hide(processingId);
+    if (!j.ok) { 
+      alert(`Query Failed: ${j.error||'unknown'}`); 
+      return; 
+    }
+    alert(`Query completed successfully. ${j.matched_count} nodes matched and configured.`);
+    if(typeof fetchRowsFromApi === 'function') fetchRowsFromApi();
+  }).catch((e)=>{
+    toastManager.hide(processingId);
+    console.error(e);
+    alert('Request failed');
+  });
+};
+
 window.toggleMaintenance = function(uuid, targetState) {
   if (!confirm(`Are you sure you want to turn ${targetState ? 'ON' : 'OFF'} maintenance for this node?`)) return;
   

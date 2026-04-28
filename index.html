@@ -126,6 +126,10 @@
           <i class="bi bi-x-circle"></i> 
           <span class="name">Abort</span>
         </div>
+        <div class="chat task-item" data-action="delete-node" style="color: #ff6b6b;">
+          <i class="bi bi-trash"></i> 
+          <span class="name">Delete</span>
+        </div>
       </div>
     </div>
   </aside>
@@ -185,6 +189,7 @@
             </select>
           </div>
           <span>entries</span>
+          <button class="qc-btn primary" onclick="openTaskModal('queryModal')" style="margin-left: 10px; padding: 6px 12px; font-size: 12px;">Query</button>
         </div>
       </div>
 
@@ -273,6 +278,27 @@
       </div>
     </div>
 
+    <!-- Query Modal -->
+    <div class="task-modal" id="queryModal">
+      <div class="task-panel">
+        <div class="task-header">Query Nodes</div>
+        <div class="task-form">
+          <div class="task-field">
+            <label class="task-label">Username</label>
+            <input type="text" id="queryUsername" class="qc-input" placeholder="Username" value="ADMIN">
+          </div>
+          <div class="task-field" style="margin-top: 15px;">
+            <label class="task-label">Password</label>
+            <input type="password" id="queryPassword" class="qc-input" placeholder="Password">
+          </div>
+          <div class="task-buttons" style="margin-top: 25px;">
+            <button class="task-btn task-btn-cancel" onclick="closeTaskModal('queryModal')">Cancel</button>
+            <button class="task-btn task-btn-execute" onclick="executeQuery()">Execute</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- Deploy Modal -->
     <div class="task-modal" id="deployModal">
       <div class="task-panel">
@@ -308,9 +334,9 @@
   <!-- Toast Container for Notifications -->
   <div id="toastContainer" class="toast-container"></div>
 
-  <script src="js/main.js?v=20"></script>
-  <script src="js/table.js?v=20"></script>
-  <script src="js/actions.js?v=20"></script>
+  <script src="js/main.js?v=22"></script>
+  <script src="js/table.js?v=22"></script>
+  <script src="js/actions.js?v=22"></script>
   <script>
     async function refreshStats(){
       try{
