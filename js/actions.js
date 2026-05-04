@@ -18,7 +18,7 @@ function executePowerAction(action) {
 }
 window.executePowerAction = executePowerAction;
 
-function executeIronicAction(action) {
+async function executeIronicAction(action) {
   const selected = Array.from(selectedServers);
   if (selected.length === 0) { 
     alert('Please select at least one server from the table.'); 
@@ -41,7 +41,8 @@ function executeIronicAction(action) {
     return;
   }
 
-  if (!confirm(`Are you sure you want to execute '${action}' on ${selected.length} servers?`)) return;
+  const confirmed = await window.customConfirm(`Are you sure you want to execute '${action}' on ${selected.length} servers?`);
+  if (!confirmed) return;
 
   const processingId = toastManager.show(`Executing '${action}'...`, 'info', 'Processing', 0);
 
@@ -148,14 +149,15 @@ function executeDeploy() {
 
 window.executeDeploy = executeDeploy;
 
-function executeRaid(type) {
+async function executeRaid(type) {
   const selected = Array.from(selectedServers);
   if (selected.length === 0) { 
     alert('Please select at least one server.'); 
     return; 
   }
   
-  if (!confirm(`Are you sure you want to execute RAID '${type}' on ${selected.length} servers?`)) return;
+  const confirmed = await window.customConfirm(`Are you sure you want to execute RAID '${type}' on ${selected.length} servers?`);
+  if (!confirmed) return;
 
   closeTaskModal('raidManagerModal');
   const processingId = toastManager.show(`Executing RAID ${type}...`, 'info', 'RAID', 0);
@@ -225,8 +227,9 @@ window.executeQuery = function() {
   });
 };
 
-window.toggleMaintenance = function(uuid, targetState) {
-  if (!confirm(`Are you sure you want to turn ${targetState ? 'ON' : 'OFF'} maintenance for this node?`)) return;
+window.toggleMaintenance = async function(uuid, targetState) {
+  const confirmed = await window.customConfirm(`Are you sure you want to turn ${targetState ? 'ON' : 'OFF'} maintenance for this node?`);
+  if (!confirmed) return;
   
   const processingId = toastManager.show(`Setting maintenance to ${targetState}...`, 'info', 'Maintenance', 0);
   
@@ -252,7 +255,7 @@ window.toggleMaintenance = function(uuid, targetState) {
 
 // Task Item click handler (direct action)
 document.querySelectorAll('#ironicActions .task-item').forEach(item => {
-  item.addEventListener('click', (e) => {
+  item.addEventListener('click', async (e) => {
     const action = item.dataset.action;
     
     if (item.classList.contains('action-rename')) {
@@ -262,7 +265,7 @@ document.querySelectorAll('#ironicActions .task-item').forEach(item => {
         return; 
       }
       const uuid = selected[0];
-      const newName = prompt('Enter new node name:');
+      const newName = await window.customPrompt('Enter new node name:');
       if (!newName) return;
 
       const processingId = toastManager.show('Renaming node...', 'info', 'Processing', 0);

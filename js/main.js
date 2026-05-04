@@ -99,26 +99,93 @@ class ToastManager {
 
 const toastManager = new ToastManager();
 
+window.customConfirm = function(message) {
+  return new Promise((resolve) => {
+    const modal = document.getElementById('customConfirmModal');
+    const titleEl = document.getElementById('customConfirmTitle');
+    const msgEl = document.getElementById('customConfirmMessage');
+    const btnOk = document.getElementById('customConfirmOk');
+    const btnCancel = document.getElementById('customConfirmCancel');
+
+    if(!modal) {
+      resolve(window.confirm(message));
+      return;
+    }
+
+    let cleanMessage = message;
+  cleanMessage = cleanMessage.replace(/\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}:\d{1,5}\s*내용:\s*/g, '').replace(/\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}:\d{1,5}\s*/g, '');
+    
+    titleEl.textContent = 'Confirm Action';
+    msgEl.innerHTML = cleanMessage.replace(/\n/g, '<br>');
+    btnCancel.style.display = 'block';
+    const promptInput = document.getElementById('customPromptInput');
+    if (promptInput) promptInput.style.display = 'none';
+    
+    modal.classList.add('show');
+
+    const handleOk = () => {
+      cleanup();
+      resolve(true);
+    };
+
+    const handleCancel = () => {
+      cleanup();
+      resolve(false);
+    };
+
+    const cleanup = () => {
+      modal.classList.remove('show');
+      btnOk.removeEventListener('click', handleOk);
+      btnCancel.removeEventListener('click', handleCancel);
+    };
+
+    btnOk.addEventListener('click', handleOk);
+    btnCancel.addEventListener('click', handleCancel);
+  });
+};
+
 window.alert = function(message) {
+  // Hide the default toast-based alert and use the new Liquid Glass Alert
+  const modal = document.getElementById('customConfirmModal');
+  const titleEl = document.getElementById('customConfirmTitle');
+  const msgEl = document.getElementById('customConfirmMessage');
+  const btnOk = document.getElementById('customConfirmOk');
+  const btnCancel = document.getElementById('customConfirmCancel');
+
+  if(!modal) {
+    console.log("Alert:", message);
+    return;
+  }
+
+  let cleanMessage = message;
+  cleanMessage = cleanMessage.replace(/192\.168\.222\.152:\d{1,5}\s*내용:\s*/g, '');
+
   let title = 'Ironic Dashboard';
-  let type = 'info';
+  const lowerMsg = cleanMessage.toLowerCase();
   
-  const lowerMsg = message.toLowerCase();
   if (lowerMsg.includes('successfully') || lowerMsg.includes('success') || lowerMsg.includes('initiated')) {
     title = 'Action Success';
-    type = 'success';
   } else if (lowerMsg.includes('failed') || lowerMsg.includes('error')) {
     title = 'Action Failed';
-    type = 'error';
-  } else if (lowerMsg.includes('executing') || lowerMsg.includes('processing')) {
-    title = 'Execution';
-    type = 'success';
   } else if (lowerMsg.includes('please select')) {
     title = 'Selection Required';
-    type = 'warning';
   }
+
+  titleEl.textContent = title;
+  msgEl.innerHTML = cleanMessage.replace(/\n/g, '<br>');
+  btnCancel.style.display = 'none';
   
-  toastManager.show(message, type, title);
+  modal.classList.add('show');
+
+  const handleOk = () => {
+    modal.classList.remove('show');
+    btnOk.removeEventListener('click', handleOk);
+    btnCancel.style.display = 'block';
+    const promptInput = document.getElementById('customPromptInput');
+    if (promptInput) promptInput.style.display = 'none'; // Reset back to default
+  };
+
+  btnOk.addEventListener('click', handleOk);
 };
 
 let alarmState = {
@@ -245,3 +312,65 @@ document.getElementById('alarmModal')?.addEventListener('click', (e) => {
 });
 
 setInterval(updateAlarmSystem, 1000);
+
+window.customPrompt = function(message) {
+  return new Promise((resolve) => {
+    const modal = document.getElementById('customConfirmModal');
+    const titleEl = document.getElementById('customConfirmTitle');
+    const msgEl = document.getElementById('customConfirmMessage');
+    const btnOk = document.getElementById('customConfirmOk');
+    const btnCancel = document.getElementById('customConfirmCancel');
+
+    if(!modal) {
+      resolve(prompt(message));
+      return;
+    }
+
+    let cleanMessage = message;
+  cleanMessage = cleanMessage.replace(/\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}:\d{1,5}\s*내용:\s*/g, '').replace(/\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}:\d{1,5}\s*/g, '');
+    
+    titleEl.textContent = 'Input Required';
+    msgEl.innerHTML = cleanMessage.replace(/\n/g, '<br>');
+    let inputEl = document.getElementById('customPromptInput');
+    if (!inputEl) {
+      inputEl = document.createElement('input');
+      inputEl.type = 'text';
+      inputEl.id = 'customPromptInput';
+      inputEl.className = 'custom-dialog-input';
+      inputEl.style = 'margin-top: 15px; width: 90%;';
+      msgEl.appendChild(document.createElement('br'));
+      msgEl.appendChild(inputEl);
+    }
+    inputEl.style.display = 'block';
+    inputEl.value = '';
+    btnCancel.style.display = 'block';
+
+    modal.classList.add('show');    
+    // Focus the input
+    setTimeout(() => {
+        const inputEl = document.getElementById('customPromptInput');
+        if(inputEl) inputEl.focus();
+    }, 50);
+
+    const handleOk = () => {
+      const inputEl = document.getElementById('customPromptInput');
+      const val = inputEl ? inputEl.value : null;
+      cleanup();
+      resolve(val);
+    };
+
+    const handleCancel = () => {
+      cleanup();
+      resolve(null);
+    };
+
+    const cleanup = () => {
+      modal.classList.remove('show');
+      btnOk.removeEventListener('click', handleOk);
+      btnCancel.removeEventListener('click', handleCancel);
+    };
+
+    btnOk.addEventListener('click', handleOk);
+    btnCancel.addEventListener('click', handleCancel);
+  });
+};

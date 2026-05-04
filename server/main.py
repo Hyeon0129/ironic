@@ -316,7 +316,7 @@ def perform_query(payload: QueryPayload):
                       "redfish_verify_ca": False
                     },
                     "bios_interface": "redfish",
-                    "boot_interface": "redfish-virtual-media",
+                    "boot_interface": "ipxe",
                     "deploy_interface": "direct",
                     "inspect_interface": "agent",
                     "management_interface": "redfish",
@@ -596,7 +596,7 @@ def update_redfish(payload: RedfishPayload):
                 {
                     "op": "replace",
                     "path": "/boot_interface",
-                    "value": "redfish-virtual-media"
+                    "value": "ipxe"
                 },
                 {
                     "op": "replace",

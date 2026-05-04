@@ -12,9 +12,7 @@
   <link rel="stylesheet" href="css/sidebar.css">
   <link rel="stylesheet" href="css/components.css">
   <link rel="stylesheet" href="css/table.css">
-  <link rel="stylesheet" href="css/ai-qc.css">
-  <link rel="stylesheet" href="css/test-automation.css">
-  <link rel="stylesheet" href="css/modals.css?v=5">
+  <link rel="stylesheet" href="css/modals.css?v=26">
   <link rel="stylesheet" href="css/toasts.css">
 </head>
 <body>
@@ -305,9 +303,9 @@
   <!-- Toast Container for Notifications -->
   <div id="toastContainer" class="toast-container"></div>
 
-  <script src="js/main.js?v=24"></script>
-  <script src="js/table.js?v=24"></script>
-  <script src="js/actions.js?v=24"></script>
+  <script src="js/main.js?v=26"></script>
+  <script src="js/table.js?v=26"></script>
+  <script src="js/actions.js?v=26"></script>
   <script>
     async function refreshStats(){
       try{
@@ -323,5 +321,18 @@
     refreshStats();
     setInterval(refreshStats, 1000);
   </script>
+
+  <!-- Custom Apple Liquid Glass Confirm Dialog -->
+  <div class="custom-dialog-backdrop" id="customConfirmModal">
+    <div class="custom-dialog-panel">
+      <div class="custom-dialog-title" id="customConfirmTitle">Confirm</div>
+      <div class="custom-dialog-message" id="customConfirmMessage">Are you sure?</div>
+      <div class="custom-dialog-buttons">
+        <button class="custom-dialog-btn task-btn-cancel" id="customConfirmCancel">Cancel</button>
+        <button class="custom-dialog-btn task-btn-execute" id="customConfirmOk">OK</button>
+      </div>
+    </div>
+  </div>
+
 </body>
 </html>
