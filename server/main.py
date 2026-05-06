@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 import subprocess
 import json
 import os
@@ -114,32 +114,34 @@ def get_os_ip_batch_api(nodes):
             if nu and mac:
                 node_macs.setdefault(nu, []).append(mac.lower())
                 
-        arp_out = subprocess.run(["arp", "-n"], capture_output=True, text=True)
-        arp_mapping = []
-        for line in arp_out.stdout.splitlines():
-            parts = line.split()
-            if len(parts) >= 3 and ":" in parts[2]:
-                ip = parts[0]
-                mac = parts[2].lower()
-                arp_mapping.append((ip, mac))
+        # Parse dnsmasq.leases file
+        lease_mapping = {}
+        try:
+            with open('/var/lib/misc/dnsmasq.leases', 'r') as f:
+                for line in f:
+                    parts = line.strip().split()
+                    if len(parts) >= 3:
+                        try:
+                            epoch = int(parts[0])
+                        except ValueError:
+                            epoch = 0
+                        mac = parts[1].lower()
+                        ip = parts[2]
+                        # Keep the IP with the most recent (largest) lease expiry
+                        existing = lease_mapping.get(mac)
+                        if not existing or epoch > existing[1]:
+                            lease_mapping[mac] = (ip, epoch)
+        except Exception:
+            pass
 
         for nu, macs in node_macs.items():
-            ips = []
-            for ip, arp_mac in arp_mapping:
-                if arp_mac in macs:
-                    if ip not in ips:
-                        ips.append(ip)
+            active_ip = "N / A"
+            for mac in macs:
+                if mac in lease_mapping:
+                    active_ip = lease_mapping[mac][0]
+                    break
+            node_to_ips[nu] = active_ip
             
-            if not ips:
-                node_to_ips[nu] = "N / A"
-            else:
-                active_ip = "N / A"
-                for ip in ips:
-                    ping_out = subprocess.run(["ping", "-c", "1", "-W", "1", ip], capture_output=True)
-                    if ping_out.returncode == 0:
-                        active_ip = ip
-                        break
-                node_to_ips[nu] = active_ip
     except Exception as e:
         pass
     return node_to_ips
@@ -370,20 +372,329 @@ def toggle_maintenance(payload: MaintenancePayload):
     except Exception as e:
         return {"ok": False, "error": str(e)}
 
+import threading
+import uuid
+import shutil
+import time
+import crypt
+from glob import glob
+
+IMAGE_DIR = "/var/lib/ironic/httpboot/images"
+USER_DATA_DIR = "/var/lib/ironic/httpboot/user-data"
+os.makedirs(IMAGE_DIR, exist_ok=True)
+os.makedirs(USER_DATA_DIR, exist_ok=True)
+
+BUILD_TASKS: Dict[str, Dict[str, Any]] = {}
+
+@app.get("/api/ssh-keys")
+def get_ssh_keys():
+    """Find public ssh keys in common directories."""
+    keys = []
+    search_paths = [
+        "/root/.ssh/*.pub",
+        "/home/*/.ssh/*.pub",
+        "/etc/ssh/*.pub"
+    ]
+    for path in search_paths:
+        keys.extend(glob(path))
+    if not keys:
+        keys = ["/root/.ssh/id_rsa.pub"]
+    return {"keys": sorted(list(set(keys)))}
+
+class PartitionConfig(BaseModel):
+    name: str
+    type: str
+    size: str
+    mkfs_type: Optional[str] = None
+    mount_point: Optional[str] = None
+
+class BuildImagePayload(BaseModel):
+    build_type: str
+    os_family: str
+    release: str
+    size_gb: str
+    partitions: List[PartitionConfig] = []
+    packages: List[str] = []
+    filename: str
+
+@app.get("/api/assets/build/active")
+def get_active_build():
+    for tid, t in BUILD_TASKS.items():
+        if t.get("running"):
+            return {"task_id": tid, **t}
+    return {"task_id": None}
+
+@app.post("/api/assets/build")
+def build_asset(payload: BuildImagePayload):
+    # Only allow one build at a time for simplicity in this test version
+    for tid, t in BUILD_TASKS.items():
+        if t.get("running"):
+            return {"ok": False, "error": "A build is already in progress."}
+
+    task_id = uuid.uuid4().hex[:12]
+    
+    BUILD_TASKS[task_id] = {
+        "status": "Initializing",
+        "progress": 0,
+        "running": True,
+        "error": None,
+        "filename": payload.filename
+    }
+    
+    def _bg_build():
+        out_path = os.path.join(IMAGE_DIR, payload.filename)
+        # Log to the images directory as requested
+        log_file_path = os.path.join(IMAGE_DIR, "build.log")
+        env = os.environ.copy()
+        
+        try:
+            BUILD_TASKS[task_id]["status"] = "Preparing environment..."
+            BUILD_TASKS[task_id]["progress"] = 5
+            
+            env["DIB_RELEASE"] = payload.release
+            env["TMPDIR"] = "/tmp"
+            
+            if payload.build_type == "os":
+                import yaml
+                env["DIB_DEV_USER_USERNAME"] = "sysadmin"
+                env["DIB_DEV_USER_PWDLESS_SUDO"] = "yes"
+
+                os_dist = payload.os_family.lower()
+                os_element = f"{os_dist}-minimal"
+
+                if os_dist == "ubuntu":
+                    env["DIB_DISTRIBUTION_MIRROR"] = "http://mirror.kakao.com/ubuntu"
+
+                env["DIB_IMAGE_SIZE"] = str(payload.size_gb)
+
+                # Use NESTED YAML structure exactly like the CLI example
+                block_config = [
+                    {"local_loop": {"name": "image0"}},
+                    {"partitioning": {
+                        "base": "image0",
+                        "label": "gpt",
+                        "partitions": []
+                    }}
+                ]
+
+                for part in payload.partitions:
+                    p = {
+                        "name": part.name,
+                        "type": str(part.type),
+                        "size": part.size
+                    }
+                    if part.mkfs_type:
+                        p["mkfs"] = {"type": part.mkfs_type}
+                        # Labels are critical for user's patch scripts
+                        if part.mount_point == "/boot":
+                            p["mkfs"]["label"] = "mkfs_boot"
+                        elif part.mount_point == "/":
+                            p["mkfs"]["label"] = "cloudimg-rootfs"
+                        
+                        if part.mount_point:
+                            passno = 1 if part.mount_point == '/' or part.mkfs_type == 'vfat' else 2
+                            opts = 'umask=0077' if part.mkfs_type == 'vfat' else 'defaults'
+                            p["mkfs"]["mount"] = {
+                                "mount_point": part.mount_point,
+                                "fstab": {
+                                    "options": opts,
+                                    "fsck-passno": passno
+                                }
+                            }
+                    block_config[1]["partitioning"]["partitions"].append(p)
+
+                config_content = yaml.dump(block_config, default_flow_style=False)
+                # In CLI example, DIB_BLOCK_DEVICE_CONFIG holds the STRING content
+                env["DIB_BLOCK_DEVICE_CONFIG"] = config_content
+
+                mandatory_pkgs = ["grub-efi-amd64", "grub-efi-amd64-signed", "shim-signed", "plymouth", "plymouth-themes", "libc6", "libkmod2", "libudev1"]
+                all_pkgs = list(set(mandatory_pkgs + payload.packages))
+                pkg_str = ",".join(all_pkgs)
+
+                cmd = [
+                    "disk-image-create",
+                    "-p", pkg_str,
+                    "-t", "qcow2", "-o", out_path,
+                    os_element, "bootloader", "grub2", "block-device-efi", "cloud-init", "growroot", "devuser"
+                ]
+            else:
+                return
+
+            BUILD_TASKS[task_id]["status"] = "Running disk-image-create..."
+            BUILD_TASKS[task_id]["progress"] = 10
+
+            with open(log_file_path, "w") as log_file:
+                proc = subprocess.Popen(cmd, env=env, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, preexec_fn=os.setsid)
+                BUILD_TASKS[task_id]["proc"] = proc
+                import sys
+                last_progress_time = time.time()
+                for line in iter(proc.stdout.readline, ''):
+                    log_file.write(line)
+                    log_file.flush()
+                    # Slow progress update (simulated)
+                    if time.time() - last_progress_time > 15:
+                        if BUILD_TASKS[task_id]["progress"] < 85:
+                            BUILD_TASKS[task_id]["progress"] += 1
+                        last_progress_time = time.time()
+                proc.wait()
+                if proc.returncode != 0:
+                    if BUILD_TASKS[task_id].get("stopped"):
+                        BUILD_TASKS[task_id]["status"] = "Build stopped by user"
+                        BUILD_TASKS[task_id]["error"] = "Stopped"
+                    else:
+                        BUILD_TASKS[task_id]["error"] = f"Build failed. Check {log_file_path}"
+                    return
+            BUILD_TASKS[task_id]["status"] = "Post-processing..."
+            BUILD_TASKS[task_id]["progress"] = 90
+            
+            if payload.build_type == "os":
+                qcow2_path = f"{out_path}.qcow2"
+                gf_mounts.sort(key=lambda x: len(x[1]))
+                gf_mount_cmds = "\n".join([f"mount {dev} {mp}" for dev, mp in gf_mounts])
+                
+                efi_patch = ""
+                if os_dist == "ubuntu":
+                    efi_patch = f"""
+mkdir-p /boot/efi/EFI/ubuntu
+cp /usr/lib/shim/shimx64.efi /boot/efi/EFI/BOOT/BOOTX64.EFI || true
+cp /usr/lib/shim/shimx64.efi /boot/efi/EFI/ubuntu/shimx64.efi || true
+cp /usr/lib/shim/fbx64.efi /boot/efi/EFI/ubuntu/fbx64.efi || true
+cp /usr/lib/grub/x86_64-efi-signed/grubx64.efi.signed /boot/efi/EFI/ubuntu/grubx64.efi || true
+cp /usr/lib/grub/x86_64-efi-signed/grubx64.efi.signed /boot/efi/EFI/BOOT/grubx64.efi || true
+write /boot/efi/EFI/ubuntu/grub.cfg "search --no-floppy --label --set=root mkfs_boot\\nset prefix=($root)/grub\\nconfigfile $prefix/grub.cfg\\n"
+write /boot/efi/EFI/BOOT/grub.cfg "search --no-floppy --label --set=root mkfs_boot\\nset prefix=($root)/grub\\nconfigfile $prefix/grub.cfg\\n"
+sh "sed -i 's|search --no-floppy --fs-uuid --set=root.*|search --no-floppy --label --set=root mkfs_boot|g' /boot/grub/grub.cfg || true"
+sh "sed -i 's|search --no-floppy --label --set=root cloudimg-rootfs|search --no-floppy --label --set=root mkfs_boot|g' /boot/grub/grub.cfg || true"
+"""
+                gf_cmd = f"guestfish -a {qcow2_path} <<'EOF'\nrun\n{gf_mount_cmds}\n{efi_patch}\nEOF\n"
+                subprocess.run(gf_cmd, shell=True, executable='/bin/bash')
+                subprocess.run(f"virt-customize -a {qcow2_path} --run-command \"sed -i 's| boot=LABEL=mkfs_boot||g' /etc/default/grub\" --run-command \"update-grub\" || true", shell=True)
+                
+                BUILD_TASKS[task_id]["status"] = "Generating checksum..."
+                BUILD_TASKS[task_id]["progress"] = 98
+                subprocess.run(f"sha256sum {os.path.basename(qcow2_path)} > {os.path.basename(qcow2_path)}.sha256", shell=True, cwd=IMAGE_DIR)
+
+            BUILD_TASKS[task_id]["status"] = "Completed successfully!"
+            BUILD_TASKS[task_id]["progress"] = 100
+            
+        except Exception as e:
+            BUILD_TASKS[task_id]["status"] = "Failed"
+            BUILD_TASKS[task_id]["error"] = str(e)
+        finally:
+            BUILD_TASKS[task_id]["running"] = False
+            try:
+                if payload.build_type == "os":
+                    os.remove(f"/tmp/dib_block_config_{task_id}.yaml")
+            except: pass
+
+    threading.Thread(target=_bg_build, daemon=True).start()
+    return {"ok": True, "task_id": task_id}
+
+@app.post("/api/assets/build/stop")
+def stop_active_build():
+    import signal
+    stopped = False
+    for tid, t in BUILD_TASKS.items():
+        if t.get("running"):
+            proc = t.get("proc")
+            if proc:
+                try:
+                    os.killpg(os.getpgid(proc.pid), signal.SIGTERM)
+                except Exception:
+                    pass
+            t["stopped"] = True
+            t["running"] = False
+            t["status"] = "Stopped"
+            t["error"] = "Build stopped by user"
+            stopped = True
+    return {"ok": stopped}
+@app.get("/api/assets/build/status/{task_id}")
+def get_build_status(task_id: str):
+    if task_id not in BUILD_TASKS:
+        return {"error": "Not found"}
+    return BUILD_TASKS[task_id]
+
+@app.get("/api/assets/build/log")
+def get_build_log(lines: int = 200):
+    log_file_path = os.path.join(IMAGE_DIR, "build.log")
+    if not os.path.exists(log_file_path):
+        return {"log": ""}
+    try:
+        # read last N lines
+        with open(log_file_path, "r", encoding="utf-8", errors="replace") as f:
+            all_lines = f.readlines()
+            return {"log": "".join(all_lines[-lines:])}
+    except Exception as e:
+        return {"log": f"Error reading log: {e}"}
+
+class UserDataPayload(BaseModel):
+    filename: str
+    hostname: str
+    username: str
+    password: str
+
+@app.post("/api/assets/userdata")
+def create_userdata(payload: UserDataPayload):
+    try:
+        hashed_pw = crypt.crypt(payload.password, crypt.mksalt(crypt.METHOD_SHA512))
+        yaml_content = f"""#cloud-config
+hostname: {payload.hostname}
+ssh_pwauth: true
+users:
+  - name: {payload.username}
+    passwd: "{hashed_pw}"
+    lock_passwd: false
+    groups: sudo
+    shell: /bin/bash
+    sudo: ALL=(ALL) NOPASSWD:ALL
+"""
+        path = os.path.join(USER_DATA_DIR, payload.filename)
+        with open(path, "w") as f:
+            f.write(yaml_content)
+        return {"ok": True}
+    except Exception as e:
+        return {"ok": False, "error": str(e)}
+
+from fastapi import UploadFile, File, Form
 @app.get("/api/deploy_files")
-def get_deploy_files():
+def get_deploy_files() -> Dict[str, List[str]]:
     try:
         images = []
         user_datas = []
-        out = subprocess.run(["sudo", "-n", "ls", "-1", HTTPBOOT_DIR], capture_output=True, text=True)
-        if out.returncode == 0:
-            for f in out.stdout.splitlines():
-                f = f.strip()
-                if f.endswith(".qcow2") or f.endswith(".raw"): images.append(f)
-                elif f.endswith(".yaml") or f.endswith(".yml") or f.endswith(".ps1"): user_datas.append(f)
+        if os.path.exists(IMAGE_DIR):
+            images = [f for f in os.listdir(IMAGE_DIR) if os.path.isfile(os.path.join(IMAGE_DIR, f)) and f.endswith(('.qcow2', '.raw'))]
+        if os.path.exists(USER_DATA_DIR):
+            user_datas = [f for f in os.listdir(USER_DATA_DIR) if os.path.isfile(os.path.join(USER_DATA_DIR, f)) and f.endswith(('.yaml', '.yml'))]
         return {"images": sorted(images), "user_datas": sorted(user_datas)}
     except Exception as e:
         return {"images": [], "user_datas": [], "error": str(e)}
+
+@app.get("/api/assets")
+def get_assets():
+    return get_deploy_files()
+
+@app.post("/api/assets/upload")
+def upload_asset(file: UploadFile = File(...), type: str = Form(...)):
+    target_dir = IMAGE_DIR if type == "image" else USER_DATA_DIR
+    file_path = os.path.join(target_dir, file.filename)
+    try:
+        with open(file_path, "wb") as buffer:
+            shutil.copyfileobj(file.file, buffer)
+        return {"ok": True, "filename": file.filename}
+    except Exception as e:
+        return {"ok": False, "error": str(e)}
+
+@app.delete("/api/assets/{type}/{filename}")
+def delete_asset(type: str, filename: str):
+    target_dir = IMAGE_DIR if type == "image" else USER_DATA_DIR
+    file_path = os.path.join(target_dir, filename)
+    if os.path.exists(file_path):
+        try:
+            os.remove(file_path)
+            return {"ok": True}
+        except Exception as e:
+            return {"ok": False, "error": str(e)}
+    return {"ok": False, "error": "File not found"}
 
 class ActionPayload(BaseModel):
     uuids: List[str]
@@ -391,72 +702,69 @@ class ActionPayload(BaseModel):
 
 @app.post("/api/actions")
 def perform_action(payload: ActionPayload):
-    results = {}
-    for uuid in payload.uuids:
-        try:
-            if payload.action in ["power-on", "power-off", "reboot"]:
-                target = payload.action.replace("-", " ")
-                if target == "reboot": target = "rebooting"
-                url = f"{IRONIC_BASE_URL}/nodes/{uuid}/states/power"
-                r = requests.put(url, headers=IRONIC_HEADERS, json={"target": target})
-                results[uuid] = handle_ironic_response(r)
-            elif payload.action == "clean":
-                url = f"{IRONIC_BASE_URL}/nodes/{uuid}/states/provision"
-                clean_payload = {
-                    "target": "clean",
-                    "clean_steps": [
-                        {
-                            "interface": "deploy",
-                            "step": "erase_devices_metadata"
-                        }
-                    ]
-                }
-                r = requests.put(url, headers=IRONIC_HEADERS, json=clean_payload)
-                results[uuid] = handle_ironic_response(r)
-            elif payload.action in ["manage", "provide", "abort", "rebuild"]:
-                url = f"{IRONIC_BASE_URL}/nodes/{uuid}/states/provision"
-                r = requests.put(url, headers=IRONIC_HEADERS, json={"target": payload.action})
-                results[uuid] = handle_ironic_response(r)
-            elif payload.action == "undeploy":
-                url = f"{IRONIC_BASE_URL}/nodes/{uuid}/states/provision"
-                r = requests.put(url, headers=IRONIC_HEADERS, json={"target": "deleted"})
-                results[uuid] = handle_ironic_response(r)
-            elif payload.action == "delete-node":
-                url = f"{IRONIC_BASE_URL}/nodes/{uuid}"
-                
-                # Fetch bmc_ip to remove credentials if they exist
-                try:
-                    node_r = requests.get(url, headers=IRONIC_HEADERS)
-                    if node_r.ok:
-                        node_data = node_r.json()
-                        bmc_ip = get_bmc_ip(node_data)
-                        if bmc_ip and bmc_ip != "N / A":
-                            creds = get_redfish_creds()
-                            if bmc_ip in creds:
-                                del creds[bmc_ip]
-                                save_redfish_creds(creds)
-                except:
-                    pass
-                
-                # Fetch ports to remove dnsmasq entries
-                try:
-                    ports_r = requests.get(f"{url}/ports", headers=IRONIC_HEADERS)
-                    if ports_r.ok:
-                        for p in ports_r.json().get("ports", []):
-                            mac = p.get("address")
-                            if mac:
-                                dnsmasq_file = f"/etc/dnsmasq.d/ironic-hosts.d/{mac.lower()}"
-                                subprocess.run(f"sudo rm -f {dnsmasq_file}", shell=True)
-                except:
-                    pass
-                
-                r = requests.delete(url, headers=IRONIC_HEADERS)
-                results[uuid] = handle_ironic_response(r)
-            else:
-                results[uuid] = {"ok": False, "error": "Unsupported action"}
-        except Exception as e:
-            results[uuid] = {"ok": False, "error": str(e)}
-    return {"ok": True, "results": results}
+    task_id = uuid.uuid4().hex[:12]
+
+    def _bg_action():
+        for uuid_node in payload.uuids:
+            try:
+                if payload.action in ["power-on", "power-off", "reboot"]:
+                    target = payload.action.replace("-", " ")
+                    if target == "reboot": target = "rebooting"
+                    url = f"{IRONIC_BASE_URL}/nodes/{uuid_node}/states/power"
+                    requests.put(url, headers=IRONIC_HEADERS, json={"target": target})
+                elif payload.action == "clean":
+                    url = f"{IRONIC_BASE_URL}/nodes/{uuid_node}/states/provision"
+                    clean_payload = {
+                        "target": "clean",
+                        "clean_steps": [
+                            {
+                                "interface": "deploy",
+                                "step": "erase_devices_metadata"
+                            }
+                        ]
+                    }
+                    requests.put(url, headers=IRONIC_HEADERS, json=clean_payload)
+                elif payload.action in ["manage", "provide", "abort", "rebuild"]:
+                    url = f"{IRONIC_BASE_URL}/nodes/{uuid_node}/states/provision"
+                    requests.put(url, headers=IRONIC_HEADERS, json={"target": payload.action})
+                elif payload.action == "undeploy":
+                    url = f"{IRONIC_BASE_URL}/nodes/{uuid_node}/states/provision"
+                    requests.put(url, headers=IRONIC_HEADERS, json={"target": "deleted"})
+                elif payload.action == "delete-node":
+                    url = f"{IRONIC_BASE_URL}/nodes/{uuid_node}"
+                    
+                    # Fetch bmc_ip to remove credentials if they exist
+                    try:
+                        node_r = requests.get(url, headers=IRONIC_HEADERS)
+                        if node_r.ok:
+                            node_data = node_r.json()
+                            bmc_ip = get_bmc_ip(node_data)
+                            if bmc_ip and bmc_ip != "N / A":
+                                creds = get_redfish_creds()
+                                if bmc_ip in creds:
+                                    del creds[bmc_ip]
+                                    save_redfish_creds(creds)
+                    except:
+                        pass
+                    
+                    # Fetch ports to remove dnsmasq entries
+                    try:
+                        ports_r = requests.get(f"{url}/ports", headers=IRONIC_HEADERS)
+                        if ports_r.ok:
+                            for p in ports_r.json().get("ports", []):
+                                mac = p.get("address")
+                                if mac:
+                                    dnsmasq_file = f"/etc/dnsmasq.d/ironic-hosts.d/{mac.lower()}"
+                                    subprocess.run(f"sudo rm -f {dnsmasq_file} && sudo systemctl restart dnsmasq", shell=True)
+                    except:
+                        pass
+                    
+                    requests.delete(url, headers=IRONIC_HEADERS)
+            except Exception as e:
+                pass
+
+    threading.Thread(target=_bg_action, daemon=True).start()
+    return {"ok": True, "task_id": task_id, "message": "Action started in background"}
 
 class DeployPayload(BaseModel):
     uuids: List[str]
@@ -469,19 +777,19 @@ def perform_deploy(payload: DeployPayload):
     for uuid in payload.uuids:
         try:
             # 1. Image Info (Match CLI: http://IP:8080/image)
-            checksum, algo = get_file_checksum(payload.image)
-            image_url = f"http://{CONTROLLER_IP}:{IMAGE_PORT}/{payload.image}"
+            checksum, algo = get_file_checksum(f"images/{payload.image}")
+            image_url = f"http://{CONTROLLER_IP}:{IMAGE_PORT}/images/{payload.image}"
 
             patch_data = [
                 {"op": "add", "path": "/instance_info/image_source", "value": image_url},
                 {"op": "add", "path": "/instance_info/image_os_hash_algo", "value": algo},
                 {"op": "add", "path": "/instance_info/image_os_hash_value", "value": checksum},
-                {"op": "add", "path": "/instance_info/root_gb", "value": 50}
-            ]
-            
+                {"op": "add", "path": "/instance_info/root_gb", "value": 0},
+                {"op": "add", "path": "/properties/root_device", "value": {"name": "/dev/sda"}}
+            ]            
             # 2. Configdrive (Match CLI: json structure)
             try:
-                user_data_path = os.path.join(HTTPBOOT_DIR, payload.user_data)
+                user_data_path = os.path.join(HTTPBOOT_DIR, "user-data", payload.user_data)
                 cat_out = subprocess.run(["sudo", "-n", "cat", user_data_path], capture_output=True, text=True)
                 if cat_out.returncode == 0:
                     # CLI used a json file content. Usually {"user_data": "..."}
@@ -682,4 +990,11 @@ def get_stats():
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 @app.get("/")
 def read_root(): return FileResponse(os.path.join(BASE_DIR, "index.html"))
+
+@app.get("/builder")
+def read_builder(): return FileResponse(os.path.join(BASE_DIR, "builder.html"))
+
+@app.get("/cloud-init")
+def read_cloud_init(): return FileResponse(os.path.join(BASE_DIR, "cloud-init.html"))
+
 app.mount("/", StaticFiles(directory=BASE_DIR), name="static")

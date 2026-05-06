@@ -224,3 +224,4 @@ filter: blur(calc(var(--bg-blur) * .35));
   grid-template-columns: 1fr;
 }
 }
+.spin-anim { animation: spin 1s linear infinite; display: inline-block; }

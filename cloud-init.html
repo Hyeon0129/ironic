@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="ko" data-theme="light">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Ironic Dashboard</title>
+<meta name="color-scheme" content="dark">
+  <link rel="icon" type="image/png" href="https://docs.x2i.dev/img/x2i_logo.png">
+  <script src="https://kit.fontawesome.com/043393dde5.js" crossorigin="anonymous"></script>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/sidebar.css">
+  <link rel="stylesheet" href="css/components.css">
+  <link rel="stylesheet" href="css/table.css">
+  <link rel="stylesheet" href="css/modals.css?v=26">
+  <link rel="stylesheet" href="css/toasts.css">
+</head>
+<body>
+  
+  <div class="bg" aria-hidden="true"></div>
+
+  <div class="top-controls">
+    <div class="theme-toggle" id="themeToggle">
+      <div class="theme-toggle-icon">
+        <svg class="sun-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="5"/>
+          <line x1="12" y1="1" x2="12" y2="3"/>
+          <line x1="12" y1="21" x2="12" y2="23"/>
+          <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/>
+          <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
+          <line x1="1" y1="12" x2="3" y2="12"/>
+          <line x1="21" y1="12" x2="23" y2="12"/>
+          <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/>
+          <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+        </svg>
+        <svg class="moon-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/>
+        </svg>
+      </div>
+    </div>
+    <div class="alarm-container">
+      <div class="alarm-icon" id="alarmIcon">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="2">
+          <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/>
+          <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/>
+        </svg>
+        <div class="alarm-badge" id="alarmBadge" style="display: none;">0</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="alarm-dropdown" id="alarmDropdown">
+    <div class="alarm-header">System Alerts</div>
+    <div id="alarmList"></div>
+  </div>
+
+  <!-- Alarm Detail Modal -->
+  <div class="modal-backdrop" id="alarmModal">
+    <div class="modal-panel">
+      <div class="modal-header">
+        <div class="modal-title">Alert Detail</div>
+        <button class="modal-close" id="modalClose">Close</button>
+      </div>
+      <div class="modal-body">
+        <div class="modal-grid">
+          <div class="modal-label">Node Name</div>
+          <div class="modal-value" id="m_name"></div>
+          <div class="modal-label">OS IP</div>
+          <div class="modal-value" id="m_osip"></div>
+          <div class="modal-label">BMC IP</div>
+          <div class="modal-value" id="m_bmcip"></div>
+          <div class="modal-label">Error Reason</div>
+          <div class="modal-value" id="m_desc"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <aside class="sidebar" aria-label="Sidebar">
+    <div class="scroll">
+      <div class="x2i-logo" style="cursor:pointer; justify-content: center; padding: 1px 0;" onclick="window.location.href='/'">
+        <img src="icon/logo.png" alt="Super Solution" style="max-height: 120px; max-width: 100%;">
+      </div>
+
+      <h6 style="color: rgba(156,163,175,.8);">Ironic Actions</h6>
+      <div class="chats" id="ironicActions">
+        <div class="chat task-item" data-action="power-manager">
+          <i class="bi bi-power"></i> 
+          <span class="name">Power Manager</span>
+        </div>
+        <div class="chat task-item action-rename">
+          <i class="bi bi-pencil-square"></i> 
+          <span class="name">Rename Node</span>
+        </div>
+        <div class="chat task-item" data-action="raid-manager">
+          <i class="bi bi-device-hdd"></i> 
+          <span class="name">RAID Configuration</span>
+        </div>
+        <div class="chat task-item" data-action="manage">
+          <i class="bi bi-tools"></i> 
+          <span class="name">Manage</span>
+        </div>
+        <div class="chat task-item" data-action="provide">
+          <i class="bi bi-box-arrow-in-right"></i> 
+          <span class="name">Provide</span>
+        </div>
+        <div class="chat task-item" data-action="deploy">
+          <i class="bi bi-cloud-arrow-up"></i> 
+          <span class="name">Deploy</span>
+        </div>
+        <div class="chat task-item" data-action="undeploy">
+          <i class="bi bi-cloud-arrow-down"></i> 
+          <span class="name">Undeploy</span>
+        </div>
+        <div class="chat task-item" data-action="clean">
+          <i class="bi bi-eraser"></i> 
+          <span class="name">Clean</span>
+        </div>
+        <div class="chat task-item" data-action="abort">
+          <i class="bi bi-x-circle"></i> 
+          <span class="name">Abort</span>
+        </div>
+        <div class="chat task-item" data-action="delete-node" style="color: #ff6b6b;">
+          <i class="bi bi-trash"></i> 
+          <span class="name">Delete</span>
+        </div>
+      </div>
+
+      <h6 style="color: rgba(156,163,175,.8); margin-top: 15px;">Image & Assets</h6>
+      <div class="chats">
+        <div class="chat task-item" onclick="window.location.href='/builder'">
+          <i class="bi bi-hammer"></i>
+          <span class="name">Builder</span>
+        </div>
+        <div class="chat task-item" onclick="window.location.href='/cloud-init'">
+          <i class="bi bi-file-earmark-code"></i>
+          <span class="name">Cloud-init</span>
+        </div>
+        <div class="chat task-item" data-task="manage-assets" id="manageAssetsTask">
+          <i class="bi bi-box-seam"></i>
+          <span class="name">Asset Manager</span>
+        </div>
+      </div>
+    </div>
+  </aside>
+  <div class="sb-sep" aria-hidden="true"></div>
+
+  <div class="topbar">
+    <div>&nbsp;&nbsp;&nbsp;</div><div>&nbsp;Cloud-init Generator</div>
+  </div>
+
+  <section class="qc-rail">
+  <div style="display: grid; grid-template-columns: 1fr 1.5fr; gap: 20px; gap: 30px; align-items: stretch;">
+    
+      </div>
+    </div>
+
+    <!-- Right: User-Data Builder -->
+    
+    <div class="qc-panel" style="display: flex; flex-direction: column; gap: 16px;">
+      <div style="display: grid; grid-template-columns: 1fr 2fr; gap: 20px;">
+        <!-- Left: Basic Info -->
+        <div style="display: flex; flex-direction: column; gap: 15px;">
+          <div class="task-field">
+             <label class="task-label">Hostname</label>
+             <input type="text" id="udHostname" class="qc-input-header" placeholder="server-01" style="width:100%;" />
+          </div>
+          <div class="task-field">
+             <label class="task-label">Username</label>
+             <input type="text" id="udUser" class="qc-input-header" placeholder="admin" style="width:100%;" />
+          </div>
+          <div class="task-field">
+             <label class="task-label">Password</label>
+             <input type="password" id="udPass" class="qc-input-header" placeholder="password" style="width:100%;" />
+          </div>
+          <div class="task-field">
+             <label class="task-label">Save as Filename (.yaml)</label>
+             <input type="text" id="udFilename" class="qc-input-header" value="cloud-init.yaml" style="width:100%;" />
+          </div>
+          <div style="margin-top: 20px;">
+            <button class="qc-btn primary" style="width:100%; justify-content:center; display:flex; padding: 15px; font-size: 16px;" onclick="createUserData()">Generate & Save</button>
+          </div>
+        </div>
+        
+        <!-- Right: Textareas -->
+        <div style="display: flex; flex-direction: column; gap: 15px;">
+          <div class="task-field" style="height: 180px;">
+             <label class="task-label">Netplan YAML (Optional)</label>
+             <textarea id="udNetplan" class="qc-input-header" style="width:100%; height:calc(100% - 25px); font-family:monospace; padding:10px; resize:none;" placeholder="network:
+  version: 2
+  ethernets:
+    eno1:
+      dhcp4: true"></textarea>
+          </div>
+          <div class="task-field" style="height: 180px;">
+             <label class="task-label">First Boot Script (RunCMD - Optional)</label>
+             <textarea id="udRuncmd" class="qc-input-header" style="width:100%; height:calc(100% - 25px); font-family:monospace; padding:10px; resize:none;" placeholder="apt-get update
+apt-get install -y nginx"></textarea>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    </div>
+  </div>
+  
+  <!-- Deploy Modal -->
+  <div class="task-modal" id="deployModal">
+    <div class="task-panel" style="max-width: 500px;">
+      <div class="task-header">Node Deployment</div>
+      <div class="task-form">
+        <div class="task-field">
+          <label class="task-label">Select Image (.qcow2 / .raw)</label>
+          <select id="deployImageSelect" class="qc-select" style="width:100%;">
+            <option value="">Select an image</option>
+          </select>
+        </div>
+        <div class="task-field">
+          <label class="task-label">Select User-Data (.yaml / .yml)</label>
+          <select id="deployUserDataSelect" class="qc-select" style="width:100%;">
+            <option value="">Select user data</option>
+          </select>
+        </div>
+        <div class="task-buttons">
+          <button class="task-btn task-btn-cancel" onclick="closeTaskModal('deployModal')">Cancel</button>
+          <button class="task-btn task-btn-execute" onclick="executeDeploy()">Start Deploy</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <!-- Asset Manager Modal -->
+    <div class="task-modal" id="assetManagerModal">
+      <div class="task-panel" style="max-width: 800px; width: 95%;">
+        <div class="task-header" style="display:flex; justify-content:space-between; align-items:center;">
+          <span>Asset Manager</span>
+          <div style="display:flex; gap:10px;">
+            <label class="qc-btn primary" style="padding:4px 8px; font-size:11px; cursor:pointer;">
+              <i class="bi bi-upload"></i> Upload
+              <input type="file" id="uploadAssetFile" style="display:none;" onchange="handleUploadAsset()" />
+            </label>
+            <button onclick="refreshAssets()" style="background:transparent; border:none; color:#fff; cursor:pointer; font-size: 16px;"><i class="bi bi-arrow-clockwise"></i></button>
+            <button class="modal-close" onclick="closeTaskModal('assetManagerModal')" style="font-size: 14px;">Close</button>
+          </div>
+        </div>
+        
+        <div style="display: flex; flex-direction: column; gap: 15px; margin-top: 15px; max-height: 70vh; overflow-y: auto; padding-right: 10px;">
+          <div style="background: rgba(0,0,0,0.2); padding: 16px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1);">
+            <div style="font-size:14px; color:#fff; margin-bottom:8px; font-weight:bold; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom:5px;">OS Images (.qcow2 / .raw)</div>
+            <ul id="imageList" style="list-style:none; padding:0; margin:0; font-size:13px; color:#ccc;"></ul>
+          </div>
+          <div style="background: rgba(0,0,0,0.2); padding: 16px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1);">
+            <div style="font-size:14px; color:#fff; margin-bottom:8px; font-weight:bold; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom:5px;">User Data (.yaml)</div>
+            <ul id="userDataList" style="list-style:none; padding:0; margin:0; font-size:13px; color:#ccc;"></ul>
+          </div>
+        </div>
+      </div>
+<!-- Custom Apple Liquid Glass Confirm Dialog -->
+  <div class="custom-dialog-backdrop" id="customConfirmModal">
+    <div class="custom-dialog-panel">
+      <div class="custom-dialog-title" id="customConfirmTitle">Confirm</div>
+      <div class="custom-dialog-message" id="customConfirmMessage">Are you sure?</div>
+      <div class="custom-dialog-buttons">
+        <button class="custom-dialog-btn task-btn-cancel" id="customConfirmCancel">Cancel</button>
+        <button class="custom-dialog-btn task-btn-execute" id="customConfirmOk">OK</button>
+      </div>
+    </div>
+  </div>
+</section>
+<!-- Toast Container for Notifications -->
+  <div id="toastContainer" class="toast-container"></div>
+
+  <script src="js/main.js"></script>
+  <script src="js/table.js"></script>
+  <script src="js/actions.js"></script>
+  <script>
+    async function refreshStats(){
+      try{
+        const r = await fetch('/api/stats');
+        if(!r.ok) return;
+        const s = await r.json();
+        document.getElementById('statTotal').textContent = s.total;
+        document.getElementById('statPowerOn').textContent = s.power_on;
+        document.getElementById('statActive').textContent = s.active;
+        document.getElementById('statError').textContent = s.error;
+      } catch(e){}
+    }
+    refreshStats();
+    setInterval(refreshStats, 1000);
+  </script>
+
+  <!-- Custom Apple Liquid Glass Confirm Dialog -->
+  <div class="custom-dialog-backdrop" id="customConfirmModal">
+    <div class="custom-dialog-panel">
+      <div class="custom-dialog-title" id="customConfirmTitle">Confirm</div>
+      <div class="custom-dialog-message" id="customConfirmMessage">Are you sure?</div>
+      <div class="custom-dialog-buttons">
+        <button class="custom-dialog-btn task-btn-cancel" id="customConfirmCancel">Cancel</button>
+        <button class="custom-dialog-btn task-btn-execute" id="customConfirmOk">OK</button>
+      </div>
+    </div>
+  </div>
+
+</body>
+</html>

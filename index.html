@@ -78,7 +78,7 @@
 
   <aside class="sidebar" aria-label="Sidebar">
     <div class="scroll">
-      <div class="x2i-logo" style="justify-content: center; padding: 1px 0;">
+      <div class="x2i-logo" style="cursor:pointer; justify-content: center; padding: 1px 0;" onclick="window.location.href='/'">
         <img src="icon/logo.png" alt="Super Solution" style="max-height: 120px; max-width: 100%;">
       </div>
 
@@ -123,6 +123,22 @@
         <div class="chat task-item" data-action="delete-node" style="color: #ff6b6b;">
           <i class="bi bi-trash"></i> 
           <span class="name">Delete</span>
+        </div>
+      </div>
+
+      <h6 style="color: rgba(156,163,175,.8); margin-top: 15px;">Image & Assets</h6>
+      <div class="chats">
+        <div class="chat task-item" onclick="window.location.href='/builder'">
+          <i class="bi bi-hammer"></i>
+          <span class="name">Builder</span>
+        </div>
+        <div class="chat task-item" onclick="window.location.href='/cloud-init'">
+          <i class="bi bi-file-earmark-code"></i>
+          <span class="name">Cloud-init</span>
+        </div>
+        <div class="chat task-item" data-task="manage-assets" id="manageAssetsTask">
+          <i class="bi bi-box-seam"></i>
+          <span class="name">Asset Manager</span>
         </div>
       </div>
     </div>
@@ -268,32 +284,180 @@
       </div>
     </div>
 
-    <!-- Deploy Modal -->
-    <div class="task-modal" id="deployModal">
-      <div class="task-panel">
-        <div class="task-header">Deploy Node</div>
-        <div class="task-form">
+    <!-- Unified Builder Modal -->
+    <div class="task-modal" id="unifiedBuilderModal">
+      <div class="task-panel" style="max-width: 900px; width: 95%;">
+        <div class="task-header" style="display:flex; justify-content:space-between; align-items:center;">
+          <span>Builder</span>
+          <button class="modal-close" onclick="closeTaskModal('unifiedBuilderModal')" style="font-size: 14px;">Close</button>
+        </div>
+        
+        <div style="display: flex; flex-direction: column; gap: 15px; margin-top: 15px; max-height: 75vh; overflow-y: auto; padding-right: 10px;">
+          
           <div class="task-field">
-            <label class="task-label">Image (.qcow2)</label>
-            <div class="qc-select-wrapper" style="margin-left: 0; width: 100%;">
-              <select id="deployImageSelect" class="qc-select" style="width: 100%;">
-                <option value="">Loading images...</option>
-              </select>
+             <label class="task-label">Target</label>
+             <select id="unifiedBuildType" class="qc-select" style="width:100%; border: 1px solid rgba(255,255,255,0.15);" onchange="toggleUnifiedBuilderFields()">
+               <option value="os">OS Image (qcow2)</option>
+               <option value="userdata">User-Data (cloud-init)</option>
+             </select>
+          </div>
+
+          <!-- OS Builder Fields -->
+          <div id="unifiedOsFields" style="display: flex; flex-direction: column; gap: 15px;">
+            <div style="display:flex; gap:10px;">
+              <div class="task-field" style="flex:1;">
+                 <label class="task-label">OS Family</label>
+                 <select id="buildOsFamily" class="qc-select" style="width:100%; border: 1px solid rgba(255,255,255,0.15);" onchange="updateOsReleases()">
+                   <option value="ubuntu">Ubuntu</option>
+                   <option value="centos">CentOS</option>
+                   <option value="rocky">Rocky Linux</option>
+                   <option value="almalinux">AlmaLinux</option>
+                   <option value="debian">Debian</option>
+                 </select>
+              </div>
+              <div class="task-field" style="flex:1;">
+                 <label class="task-label">OS Release / Version</label>
+                 <select id="buildRelease" class="qc-select" style="width:100%; border: 1px solid rgba(255,255,255,0.15);">
+                   <option value="noble">24.04 (Noble)</option>
+                   <option value="jammy">22.04 (Jammy)</option>
+                   <option value="focal">20.04 (Focal)</option>
+                 </select>
+              </div>
+            </div>
+
+            <div style="display:flex; gap:10px;">
+              <div class="task-field" style="flex:1;">
+                 <label class="task-label">Authorized Keys (SSH Pub)</label>
+                 <select id="buildSsh" class="qc-select" style="width:100%; border: 1px solid rgba(255,255,255,0.15);">
+                   <option value="">Loading keys...</option>
+                 </select>
+              </div>
+              <div class="task-field" style="flex:1;">
+                 <label class="task-label">Image Size (GB)</label>
+                 <input type="number" id="buildSize" class="qc-input-header" value="6" style="width:100%; box-sizing:border-box; border: 1px solid rgba(255,255,255,0.15);" />
+              </div>
+            </div>
+
+            <div class="task-field">
+               <label class="task-label">Extra Packages (comma separated)</label>
+               <input type="text" id="buildPkgs" class="qc-input-header" placeholder="e.g. htop,tmux" style="width:100%; box-sizing:border-box; border: 1px solid rgba(255,255,255,0.15);" />
+            </div>
+
+            <div class="task-field" style="background: rgba(0,0,0,0.2); padding: 15px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1);">
+               <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 10px;">
+                 <label class="task-label" style="margin:0;">Partition Configuration</label>
+                 <button class="qc-btn" style="padding: 2px 8px; font-size: 11px;" onclick="addPartitionRow()">+ Add Partition</button>
+               </div>
+               <div id="partitionList" style="display:flex; flex-direction:column; gap:8px;">
+                  <!-- Partitions will be injected here dynamically -->
+               </div>
+            </div>
+
+            <div class="task-field">
+               <label class="task-label">Output Filename</label>
+               <input type="text" id="buildFilename" class="qc-input-header" value="ubuntu-custom" style="width:100%; box-sizing:border-box; border: 1px solid rgba(255,255,255,0.15);" />
+            </div>
+            
+            <div style="margin-top: 10px;">
+              <button class="qc-btn primary" style="width:100%; justify-content:center; display:flex; padding: 12px; font-size: 14px;" onclick="startBuildImage()">Start OS Build Process</button>
+              <div id="buildProgressContainer" style="display:none; margin-top: 15px;">
+                <div style="display:flex; justify-content:space-between; margin-bottom:5px;">
+                  <span id="buildProgressStatus" style="font-size:12px; color:#fff;">Starting...</span>
+                  <span id="buildProgressPct" style="font-size:12px; color:#fff;">0%</span>
+                </div>
+                <div style="background:rgba(255,255,255,0.1); height:8px; border-radius:4px; overflow:hidden;">
+                  <div id="buildProgressBar" style="width:0%; height:100%; background:linear-gradient(90deg, #3b82f6, #8b5cf6); transition:width 0.3s;"></div>
+                </div>
+              </div>
             </div>
           </div>
-          
-          <div class="task-field" style="margin-top: 15px;">
-            <label class="task-label">User Data (.yaml)</label>
-            <div class="qc-select-wrapper" style="margin-left: 0; width: 100%;">
-              <select id="deployUserDataSelect" class="qc-select" style="width: 100%;">
-                <option value="">Loading user_data...</option>
-              </select>
+
+          <!-- User-Data Fields -->
+          <div id="unifiedUserdataFields" style="display: none; flex-direction: column; gap: 15px;">
+            <div style="display:flex; gap:10px;">
+              <div class="task-field" style="flex:1;">
+                 <label class="task-label">Hostname</label>
+                 <input type="text" id="udHostname" class="qc-input-header" placeholder="server-01" style="width:100%; box-sizing:border-box; border: 1px solid rgba(255,255,255,0.15);" />
+              </div>
+              <div class="task-field" style="flex:1;">
+                 <label class="task-label">Username</label>
+                 <input type="text" id="udUser" class="qc-input-header" placeholder="admin" style="width:100%; box-sizing:border-box; border: 1px solid rgba(255,255,255,0.15);" />
+              </div>
+              <div class="task-field" style="flex:1;">
+                 <label class="task-label">Password</label>
+                 <input type="password" id="udPass" class="qc-input-header" placeholder="password" style="width:100%; box-sizing:border-box; border: 1px solid rgba(255,255,255,0.15);" />
+              </div>
             </div>
+
+            <div class="task-field">
+               <label class="task-label">Netplan YAML (Optional)</label>
+               <textarea id="udNetplan" class="qc-input-header" style="width:100%; height:80px; box-sizing:border-box; font-size:12px; font-family:monospace; padding:8px; border: 1px solid rgba(255,255,255,0.15); border-radius:8px;" placeholder="network:\n  version: 2\n  ethernets:\n    eno1:\n      dhcp4: true"></textarea>
+            </div>
+
+            <div class="task-field">
+               <label class="task-label">First Boot Script (RunCMD - Optional)</label>
+               <textarea id="udRuncmd" class="qc-input-header" style="width:100%; height:80px; box-sizing:border-box; font-size:12px; font-family:monospace; padding:8px; border: 1px solid rgba(255,255,255,0.15); border-radius:8px;" placeholder="apt-get update\napt-get install -y nginx"></textarea>
+            </div>
+
+            <div class="task-field">
+               <label class="task-label">Save as Filename (.yaml)</label>
+               <input type="text" id="udFilename" class="qc-input-header" value="cloud-init.yaml" style="width:100%; box-sizing:border-box; border: 1px solid rgba(255,255,255,0.15);" />
+            </div>
+            
+            <button class="qc-btn primary" style="width:100%; justify-content:center; display:flex;" onclick="createUserData()">Generate & Save User-Data</button>
           </div>
           
-          <div class="task-buttons" style="margin-top: 25px;">
-            <button class="task-btn task-btn-cancel" onclick="closeTaskModal('deployModal')">Cancel</button>
-            <button class="task-btn task-btn-execute" onclick="executeDeploy()">Deploy</button>
+        </div>
+      </div>
+    </div>
+
+  <!-- Deploy Modal -->
+  <div class="task-modal" id="deployModal">
+    <div class="task-panel" style="max-width: 500px;">
+      <div class="task-header">Node Deployment</div>
+      <div class="task-form">
+        <div class="task-field">
+          <label class="task-label">Select Image (.qcow2 / .raw)</label>
+          <select id="deployImageSelect" class="qc-select" style="width:100%;">
+            <option value="">Select an image</option>
+          </select>
+        </div>
+        <div class="task-field">
+          <label class="task-label">Select User-Data (.yaml / .yml)</label>
+          <select id="deployUserDataSelect" class="qc-select" style="width:100%;">
+            <option value="">Select user data</option>
+          </select>
+        </div>
+        <div class="task-buttons">
+          <button class="task-btn task-btn-cancel" onclick="closeTaskModal('deployModal')">Cancel</button>
+          <button class="task-btn task-btn-execute" onclick="executeDeploy()">Start Deploy</button>
+        </div>
+      </div>
+    </div>
+  </div>
+    <!-- Asset Manager Modal -->
+    <div class="task-modal" id="assetManagerModal">
+      <div class="task-panel" style="max-width: 800px; width: 95%;">
+        <div class="task-header" style="display:flex; justify-content:space-between; align-items:center;">
+          <span>Asset Manager</span>
+          <div style="display:flex; gap:10px;">
+            <label class="qc-btn primary" style="padding:4px 8px; font-size:11px; cursor:pointer;">
+              <i class="bi bi-upload"></i> Upload
+              <input type="file" id="uploadAssetFile" style="display:none;" onchange="handleUploadAsset()" />
+            </label>
+            <button onclick="refreshAssets()" style="background:transparent; border:none; color:#fff; cursor:pointer; font-size: 16px;"><i class="bi bi-arrow-clockwise"></i></button>
+            <button class="modal-close" onclick="closeTaskModal('assetManagerModal')" style="font-size: 14px;">Close</button>
+          </div>
+        </div>
+        
+        <div style="display: flex; flex-direction: column; gap: 15px; margin-top: 15px; max-height: 70vh; overflow-y: auto; padding-right: 10px;">
+          <div style="background: rgba(0,0,0,0.2); padding: 16px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1);">
+            <div style="font-size:14px; color:#fff; margin-bottom:8px; font-weight:bold; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom:5px;">OS Images (.qcow2 / .raw)</div>
+            <ul id="imageList" style="list-style:none; padding:0; margin:0; font-size:13px; color:#ccc;"></ul>
+          </div>
+          <div style="background: rgba(0,0,0,0.2); padding: 16px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1);">
+            <div style="font-size:14px; color:#fff; margin-bottom:8px; font-weight:bold; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom:5px;">User Data (.yaml)</div>
+            <ul id="userDataList" style="list-style:none; padding:0; margin:0; font-size:13px; color:#ccc;"></ul>
           </div>
         </div>
       </div>
@@ -303,9 +467,9 @@
   <!-- Toast Container for Notifications -->
   <div id="toastContainer" class="toast-container"></div>
 
-  <script src="js/main.js?v=26"></script>
-  <script src="js/table.js?v=26"></script>
-  <script src="js/actions.js?v=26"></script>
+  <script src="js/main.js"></script>
+  <script src="js/table.js"></script>
+  <script src="js/actions.js"></script>
   <script>
     async function refreshStats(){
       try{
