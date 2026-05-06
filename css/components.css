@@ -197,6 +197,7 @@ stroke: rgba(238,242,250,.7);
 transform: translateY(-50%) rotate(180deg);
 }
 
+
 /* header 수정 - 검색바를 헤더로 이동 */
 .qc-head{
 display:flex; 

@@ -998,19 +998,15 @@ color: rgba(184,194,210,.8);
 }
 
 [data-theme="light"] .task-btn-cancel {
-  background: rgba(0, 0, 0, 0.05) !important;
-  border: 1px solid rgba(0, 0, 0, 0.05) !important;
-  color: rgba(0, 0, 0, 0.7) !important;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.5) !important;
-}
-
-.task-btn-cancel:hover {
-  background: rgba(255, 255, 255, 0.15) !important;
-  transform: translateY(-1px) scale(1.02) !important;
+  background: #ffffff !important;
+  border: 1px solid #d1d5db !important;
+  color: #374151 !important;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.05) !important;
 }
 
 [data-theme="light"] .task-btn-cancel:hover {
-  background: rgba(0, 0, 0, 0.08) !important;
+  background: #f9fafb !important;
+  border-color: #9ca3af !important;
 }
 
 .task-btn-execute {
@@ -1025,22 +1021,15 @@ color: rgba(184,194,210,.8);
 }
 
 [data-theme="light"] .task-btn-execute {
-  background: linear-gradient(135deg, rgba(0, 122, 255, 0.15), rgba(0, 122, 255, 0.08)) !important;
-  border: 1px solid rgba(0, 122, 255, 0.25) !important;
-  color: rgba(0, 122, 255, 0.9) !important;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.5) !important;
-}
-
-.task-btn-execute:hover {
-  background: linear-gradient(135deg, rgba(10, 132, 255, 0.35), rgba(10, 132, 255, 0.25)) !important;
-  border-color: rgba(10, 132, 255, 0.4) !important;
-  transform: translateY(-1px) scale(1.02) !important;
-  box-shadow: 0 4px 12px rgba(10, 132, 255, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.15) !important;
+  background: #2563eb !important;
+  border: 1px solid #1d4ed8 !important;
+  color: #ffffff !important;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.05) !important;
 }
 
 [data-theme="light"] .task-btn-execute:hover {
-  background: linear-gradient(135deg, rgba(0, 122, 255, 0.25), rgba(0, 122, 255, 0.15)) !important;
-  box-shadow: 0 4px 12px rgba(0, 122, 255, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.6) !important;
+  background: #1d4ed8 !important;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1) !important;
 }
 
 /* Apple Liquid Glass Modal Overrides */
@@ -1056,16 +1045,89 @@ color: rgba(184,194,210,.8);
   box-shadow: 0 30px 60px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.1) !important;
 }
 
+/* --- Light Theme Modal Overrides (Side menu click modals to match dark theme) --- */
 [data-theme="light"] .modal-panel, 
 [data-theme="light"] .task-panel, 
 [data-theme="light"] .progress-panel, 
-[data-theme="light"] .action-menu {
-  background: rgba(255, 255, 255, 0.65) !important;
-  backdrop-filter: blur(32px) saturate(180%) !important;
-  -webkit-backdrop-filter: blur(32px) saturate(180%) !important;
-  border: 1px solid rgba(255, 255, 255, 0.4) !important;
-  box-shadow: 0 30px 60px rgba(0, 0, 0, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.5) !important;
+[data-theme="light"] .action-menu,
+[data-theme="light"] .custom-dialog-panel {
+  background: rgba(20, 24, 32, 0.95) !important;
+  border: 1px solid rgba(255, 255, 255, 0.15) !important;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6) !important;
+  backdrop-filter: blur(20px) !important;
+  -webkit-backdrop-filter: blur(20px) !important;
+  color: rgba(238, 242, 250, 0.96) !important;
 }
+
+/* Modal Headers & Titles */
+[data-theme="light"] .modal-title,
+[data-theme="light"] .task-header,
+[data-theme="light"] .action-menu-header,
+[data-theme="light"] .custom-dialog-title {
+  color: rgba(238, 242, 250, 0.96) !important;
+  border-bottom-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+/* Modal Content Labels & Values */
+[data-theme="light"] .modal-label,
+[data-theme="light"] .task-label,
+[data-theme="light"] .custom-dialog-message {
+  color: rgba(184, 194, 210, 0.9) !important;
+}
+
+[data-theme="light"] .modal-value {
+  color: rgba(238, 242, 250, 0.96) !important;
+}
+
+[data-theme="light"] .modal-grid {
+  border-top-color: rgba(255, 255, 255, 0.08) !important;
+}
+
+/* Modal Buttons */
+[data-theme="light"] .modal-close,
+[data-theme="light"] .task-btn-cancel {
+  background: rgba(255, 255, 255, 0.1) !important;
+  border: 1px solid rgba(255, 255, 255, 0.15) !important;
+  color: rgba(255, 255, 255, 0.9) !important;
+}
+
+[data-theme="light"] .task-btn-execute {
+  background: linear-gradient(135deg, rgba(78, 130, 255, 0.8), rgba(165, 141, 255, 0.6)) !important;
+  border: 1px solid rgba(120, 177, 255, 0.3) !important;
+  color: #ffffff !important;
+}
+
+/* Action Menu Items */
+[data-theme="light"] .action-menu .action-item {
+  background-color: rgba(255, 255, 255, 0.05) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  color: rgba(238, 242, 250, 0.94) !important;
+}
+
+[data-theme="light"] .action-menu .action-item:hover {
+  background-color: rgba(255, 255, 255, 0.08) !important;
+  border-color: rgba(120, 177, 255, 0.3) !important;
+}
+
+[data-theme="light"] .action-menu .action-item-icon {
+  background-color: rgba(255, 255, 255, 0.1) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+}
+
+/* Form Inputs within Modals */
+[data-theme="light"] .task-input, 
+[data-theme="light"] .qc-input,
+[data-theme="light"] .qc-select {
+  background: rgba(0, 0, 0, 0.3) !important;
+  border: 1px solid rgba(255, 255, 255, 0.15) !important;
+  color: rgba(238, 242, 250, 0.96) !important;
+}
+
+[data-theme="light"] .qc-select option {
+  background: #1a1e26 !important;
+  color: rgba(238, 242, 250, 0.96) !important;
+}
+/* --- End of Light Theme Overrides --- */
 
 /* Simple Input Forms */
 .task-input, 
@@ -1082,25 +1144,17 @@ color: rgba(184,194,210,.8);
 
 [data-theme="light"] .task-input, 
 [data-theme="light"] .qc-input {
-  background: rgba(255, 255, 255, 0.5) !important;
-  border: 1px solid rgba(0, 0, 0, 0.05) !important;
-  color: #1d1d1f !important;
-  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.05) !important;
-}
-
-.task-input:focus, 
-.qc-input:focus {
-  outline: none !important;
-  background: rgba(0, 0, 0, 0.15) !important;
-  border-color: rgba(120, 177, 255, 0.6) !important;
-  box-shadow: 0 0 0 3px rgba(120, 177, 255, 0.2) !important;
+  background: #ffffff !important;
+  border: 1px solid #d1d5db !important;
+  color: #111827 !important;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.05) !important;
 }
 
 [data-theme="light"] .task-input:focus, 
 [data-theme="light"] .qc-input:focus {
-  background: rgba(255, 255, 255, 0.8) !important;
-  border-color: rgba(10, 132, 255, 0.6) !important;
-  box-shadow: 0 0 0 3px rgba(10, 132, 255, 0.2) !important;
+  background: #ffffff !important;
+  border-color: #3b82f6 !important;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1) !important;
 }
 
 /* Custom Dialog (Apple Liquid Glass) */
@@ -1141,9 +1195,10 @@ color: rgba(184,194,210,.8);
 }
 
 [data-theme="light"] .custom-dialog-panel {
-  background: rgba(255, 255, 255, 0.65);
-  border: 1px solid rgba(255, 255, 255, 0.4);
-  box-shadow: 0 30px 60px rgba(0, 0, 0, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.5);
+  background: #ffffff !important;
+  border: 1px solid #e5e7eb !important;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1) !important;
+  backdrop-filter: none !important;
 }
 
 .custom-dialog-backdrop.show .custom-dialog-panel {

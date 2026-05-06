@@ -47,8 +47,9 @@ background: linear-gradient(to right, rgba(0,0,0,.08), transparent);
 .sidebar .scroll{overflow:auto; padding:2px 6px 10px}
 
 .sidebar:not(.collapsed) .scroll{padding-top:0}
-.sidebar .scroll::-webkit-scrollbar{width:10px}
-.sidebar .scroll::-webkit-scrollbar-thumb{background: rgba(255,255,255,.10); border-radius:8px}
+.sidebar .scroll::-webkit-scrollbar{width:8px}
+.sidebar .scroll::-webkit-scrollbar-thumb{background: #333; border-radius:8px}
+.sidebar .scroll::-webkit-scrollbar-thumb:hover{background: #444}
 
 .nav{display:grid; gap:2px; padding:6px}
 .item{
