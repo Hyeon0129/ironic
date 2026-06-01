@@ -166,24 +166,32 @@ function Create-ImageVirtualDisk {
         # -match creates an env variable called $Matches
         $path -match "\\\\.\\PHYSICALDRIVE(?<num>\d+)" | Out-Null
         $diskNum = $Matches["num"]
-        $volumeLabel = "Windows"
+        $volumeLabel = ""
 
-        if ($DiskLayout -eq "UEFI") {
-            Initialize-Disk -Number $diskNum -PartitionStyle GPT   
-            $systemPart = New-Partition -DiskNumber $diskNum -Size 500MB `
-                -GptType '{c12a7328-f81f-11d2-ba4b-00a0c93ec93b}' -AssignDriveLetter
-            & format.com "$($systemPart.DriveLetter):" /FS:FAT32 /Q /Y | Out-Null
-            if ($LASTEXITCODE) { throw "Format failed" }
+       if ($DiskLayout -eq "UEFI") {
+        $dpScript = @"
+select disk $diskNum
+clean
+convert gpt
+select partition 1
+delete partition override
+"@
+        $dpFile = "$env:TEMP\init_disk.txt"
+        $dpScript | Out-File -FilePath $dpFile -Encoding ASCII
+        diskpart /s $dpFile | Out-File "$env:TEMP\diskpart-output.txt"
+        Remove-Item $dpFile -Force
 
-            New-Partition -DiskNumber $diskNum -Size 16MB `
-                -GptType '{e3c9e316-0b5c-4db8-817d-f92df00215ae}' | Out-Null
+        $systemPart = New-Partition -DiskNumber $diskNum -Size 500MB `
+            -GptType '{c12a7328-f81f-11d2-ba4b-00a0c93ec93b}' -AssignDriveLetter
+        & format.com "$($systemPart.DriveLetter):" /FS:FAT32 /Q /Y | Out-Null
+        if ($LASTEXITCODE) { throw "Format failed" }
 
-            $windowsPart = New-Partition -DiskNumber $diskNum -Size 40960MB `
-                -GptType "{ebd0a0a2-b9e5-4433-87c0-68b6b72699c7}" -AssignDriveLetter
+        New-Partition -DiskNumber $diskNum -Size 16MB `
+            -GptType '{e3c9e316-0b5c-4db8-817d-f92df00215ae}' | Out-Null
 
-            New-Partition -DiskNumber $diskNum -Size 2048MB `
-                -GptType '{de94bba4-06d1-4d40-a16a-bfd50179d6ac}' | Out-Null
-        }
+        $windowsPart = New-Partition -DiskNumber $diskNum -UseMaximumSize `
+            -GptType '{ebd0a0a2-b9e5-4433-87c0-68b6b72699c7}' -AssignDriveLetter
+    }
          else {
             # BIOS
             Initialize-Disk -Number $diskNum -PartitionStyle MBR
