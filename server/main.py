@@ -21,7 +21,7 @@ app.add_middleware(
 )
 
 # Ironic API Endpoint
-IRONIC_BASE_URL = "http://192.168.222.152:6385/v1"
+IRONIC_BASE_URL = "http://localhost:6385/v1"
 IRONIC_HEADERS = {
     "X-OpenStack-Ironic-API-Version": "1.80",
     "Content-Type": "application/json"
@@ -664,7 +664,7 @@ def get_deploy_files() -> Dict[str, List[str]]:
         if os.path.exists(IMAGE_DIR):
             images = [f for f in os.listdir(IMAGE_DIR) if os.path.isfile(os.path.join(IMAGE_DIR, f)) and f.endswith(('.qcow2', '.raw'))]
         if os.path.exists(USER_DATA_DIR):
-            user_datas = [f for f in os.listdir(USER_DATA_DIR) if os.path.isfile(os.path.join(USER_DATA_DIR, f)) and f.endswith(('.yaml', '.yml'))]
+            user_datas = [f for f in os.listdir(USER_DATA_DIR) if os.path.isfile(os.path.join(USER_DATA_DIR, f)) and f.endswith(('.yaml', '.yml', '.ps1'))]
         return {"images": sorted(images), "user_datas": sorted(user_datas)}
     except Exception as e:
         return {"images": [], "user_datas": [], "error": str(e)}
@@ -786,7 +786,11 @@ def perform_deploy(payload: DeployPayload):
                 {"op": "add", "path": "/instance_info/image_os_hash_value", "value": checksum},
                 {"op": "add", "path": "/instance_info/root_gb", "value": 0},
                 {"op": "add", "path": "/properties/root_device", "value": {"name": "/dev/sda"}}
-            ]            
+            ]
+            
+            if payload.image.lower().endswith('.raw'):
+                patch_data.append({"op": "add", "path": "/instance_info/image_disk_format", "value": "raw"})
+            
             # 2. Configdrive (Match CLI: json structure)
             try:
                 user_data_path = os.path.join(HTTPBOOT_DIR, "user-data", payload.user_data)
@@ -990,11 +994,5 @@ def get_stats():
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 @app.get("/")
 def read_root(): return FileResponse(os.path.join(BASE_DIR, "index.html"))
-
-@app.get("/builder")
-def read_builder(): return FileResponse(os.path.join(BASE_DIR, "builder.html"))
-
-@app.get("/cloud-init")
-def read_cloud_init(): return FileResponse(os.path.join(BASE_DIR, "cloud-init.html"))
 
 app.mount("/", StaticFiles(directory=BASE_DIR), name="static")

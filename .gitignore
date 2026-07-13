@@ -1,2 +1,8 @@
 .venv/
 test
+__pycache__/
+*.pyc
+uvicorn.log
+redfish_creds.json
+ironic.conf
+.claude/
