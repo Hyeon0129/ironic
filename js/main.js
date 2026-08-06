@@ -313,6 +313,144 @@ document.getElementById('alarmModal')?.addEventListener('click', (e) => {
 
 setInterval(updateAlarmSystem, 1000);
 
+// Node Detail Modal — opened by clicking any row in the main table.
+// Same modal-backdrop/modal-panel/modal-grid look as the alarm detail
+// modal above, plus a small "Recent History" list (Ironic's Node History
+// API, populated whenever last_error is set on the node).
+// Ironic node history severities are ERROR/WARNING/INFO (python logging
+// levels) — give each its own glyph + color instead of just a color swap,
+// so the icon itself communicates status at a glance.
+function getHistoryIcon(severity) {
+  const s = (severity || '').toLowerCase();
+  if (s === 'error' || s === 'critical') {
+    return { glyph: '✕', bg: 'linear-gradient(135deg, rgba(220,53,69,.9), rgba(183,28,28,.8))' };
+  }
+  if (s === 'warning') {
+    return { glyph: '!', bg: 'linear-gradient(135deg, rgba(245,158,11,.95), rgba(217,119,6,.9))' };
+  }
+  return { glyph: 'i', bg: 'linear-gradient(135deg, rgba(78,130,255,.9), rgba(58,100,220,.8))' };
+}
+
+async function openNodeDetail(uuid) {
+  const modal = document.getElementById('nodeDetailModal');
+  if (!modal || !uuid) return;
+  modal.classList.add('show');
+
+  const setVal = (id, value) => {
+    const el = document.getElementById(id);
+    if (el) el.textContent = (value === undefined || value === null || value === '') ? '-' : value;
+  };
+
+  // Show what we already have from the table's 1s poll instantly, then
+  // fill in the rest (driver, image, inventory, history) from the detail call.
+  const cached = (typeof state !== 'undefined' && state.data) ? state.data.find(r => r.uuid === uuid) : null;
+  setVal('nd_name', cached ? (cached.name || cached.uuid) : uuid);
+  setVal('nd_uuid', uuid);
+  setVal('nd_power', cached?.power);
+  setVal('nd_provision', cached?.provision_state);
+  setVal('nd_maintenance', cached ? (cached.maintenance ? 'ON' : 'OFF') : '-');
+  setVal('nd_osip', cached?.os_ip);
+  setVal('nd_bmcip', cached?.bmc_ip);
+  setVal('nd_lasterror', cached?.last_error);
+  ['nd_driver', 'nd_image'].forEach(id => setVal(id, 'Loading...'));
+  const invEl = document.getElementById('nd_inventory');
+  if (invEl) invEl.innerHTML = '<div class="modal-label">Hardware</div><div class="modal-value">Loading...</div>';
+  const histEl = document.getElementById('nd_history');
+  if (histEl) histEl.innerHTML = '<div style="text-align:center; color:rgba(184,194,210,.7); padding:12px; font-size:12px;">Loading...</div>';
+
+  try {
+    const r = await fetch(`${window.API_BASE}/api/nodes/${uuid}/detail`);
+    const data = await r.json();
+    if (!data.ok) {
+      if (invEl) invEl.innerHTML = `<div class="modal-label">Hardware</div><div class="modal-value">Failed to load: ${data.error || 'unknown'}</div>`;
+      return;
+    }
+    const n = data.node;
+    setVal('nd_name', n.name || n.uuid);
+    setVal('nd_power', n.power_state);
+    setVal('nd_provision', n.provision_state);
+    setVal('nd_maintenance', n.maintenance ? `ON (${n.maintenance_reason || '-'})` : 'OFF');
+    setVal('nd_osip', n.os_ip);
+    setVal('nd_bmcip', n.bmc_ip);
+    setVal('nd_driver', n.driver);
+    setVal('nd_image', (n.instance_info || {}).image_source);
+    setVal('nd_lasterror', n.last_error);
+    renderInventory(data.inventory || {});
+
+    const hist = data.history || [];
+    if (!histEl) return;
+    if (!hist.length) {
+      histEl.innerHTML = '<div style="text-align:center; color:rgba(184,194,210,.7); padding:12px; font-size:12px;">No history recorded</div>';
+    } else {
+      histEl.innerHTML = hist.map(h => {
+        const { glyph, bg } = getHistoryIcon(h.severity);
+        return `
+          <div class="alarm-item" style="cursor:default;">
+            <div class="nd-history-icon" style="background:${bg};">${glyph}</div>
+            <div class="alarm-item-content">
+              <div class="alarm-item-title">${h.event || '-'}</div>
+              <div class="alarm-item-desc">${h.created_at || ''}${h.event_type ? ' · ' + h.event_type : ''}</div>
+            </div>
+          </div>`;
+      }).join('');
+    }
+  } catch (e) {
+    console.error('Failed to load node detail', e);
+    if (invEl) invEl.innerHTML = '<div class="modal-label">Hardware</div><div class="modal-value">Request failed</div>';
+  }
+}
+
+// Builds the CPU/Memory/Disk/NIC rows below the main grid from Ironic's
+// introspection inventory (GET /nodes/{uuid}/inventory — same data as
+// `baremetal node inventory save`). Empty inventory just means the node
+// hasn't been inspected yet (see the sidebar's Inspect action).
+function renderInventory(inv) {
+  const el = document.getElementById('nd_inventory');
+  if (!el) return;
+  const rows = [];
+
+  if (inv.cpu_model) {
+    rows.push(['CPU', inv.cpu_arch ? `${inv.cpu_model} (${inv.cpu_arch})` : inv.cpu_model]);
+  }
+  if (inv.memory_gb != null) {
+    rows.push(['Memory', `${inv.memory_gb} GB`]);
+  }
+  const disks = inv.disks || [];
+  disks.forEach((d, i) => {
+    const bits = [];
+    if (d.size_gb != null) bits.push(`${d.size_gb} GB`);
+    if (d.vendor) bits.push(`vendor ${d.vendor}`);
+    if (d.serial) bits.push(`serial ${d.serial}`);
+    const label = disks.length > 1 ? `Disk ${i + 1}` : 'Disk';
+    rows.push([label, `${d.name || '-'}${bits.length ? ' — ' + bits.join(', ') : ''}`]);
+  });
+  // ipv4_address here is deliberately left out: it's whatever the IPA
+  // ramdisk had at inspection/cleaning time, not the node's current IP —
+  // showing it next to the (correct, live) OS IP field above would just be
+  // confusing. MAC is stable, so that's the only thing worth surfacing.
+  const nics = inv.interfaces || [];
+  nics.forEach((n, i) => {
+    const label = nics.length > 1 ? `NIC ${i + 1}` : 'NIC';
+    rows.push([label, `${n.name || '-'}${n.mac_address ? ' — ' + n.mac_address : ''}`]);
+  });
+
+  el.innerHTML = rows.length
+    ? rows.map(([l, v]) => `<div class="modal-label">${l}</div><div class="modal-value">${v}</div>`).join('')
+    : '<div class="modal-label">Hardware</div><div class="modal-value">Not inspected yet</div>';
+}
+
+function closeNodeDetail() {
+  const modal = document.getElementById('nodeDetailModal');
+  if (modal) modal.classList.remove('show');
+}
+
+document.getElementById('nodeDetailClose')?.addEventListener('click', closeNodeDetail);
+document.getElementById('nodeDetailModal')?.addEventListener('click', (e) => {
+  if (e.target.id === 'nodeDetailModal') closeNodeDetail();
+});
+
+window.openNodeDetail = openNodeDetail;
+
 window.customPrompt = function(message) {
   return new Promise((resolve) => {
     const modal = document.getElementById('customConfirmModal');

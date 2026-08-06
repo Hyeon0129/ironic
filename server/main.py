@@ -421,7 +421,7 @@ def perform_action(payload: ActionPayload):
                         ]
                     }
                     requests.put(url, headers=IRONIC_HEADERS, json=clean_payload)
-                elif payload.action in ["manage", "provide", "abort", "rebuild"]:
+                elif payload.action in ["manage", "provide", "abort", "rebuild", "inspect"]:
                     url = f"{IRONIC_BASE_URL}/nodes/{uuid_node}/states/provision"
                     requests.put(url, headers=IRONIC_HEADERS, json={"target": payload.action})
                 elif payload.action == "undeploy":
@@ -678,6 +678,105 @@ def rename_node(payload: RenamePayload):
     except Exception as e:
         return {"ok": False, "error": str(e)}
 
+@app.get("/api/nodes/{uuid}/detail")
+def get_node_detail(uuid: str):
+    """Single-node detail popup: current Ironic state + recent history.
+    History uses the Node History API (Ironic microversion 1.78+, already
+    covered by our X-OpenStack-Ironic-API-Version: 1.80) which records an
+    event every time last_error is set — closest thing Ironic has to a
+    per-node deploy/error log."""
+    try:
+        r = requests.get(f"{IRONIC_BASE_URL}/nodes/{uuid}", headers=IRONIC_HEADERS)
+        if not r.ok:
+            return {"ok": False, "error": f"Node not found ({r.status_code})"}
+        n = r.json()
+
+        os_ip = get_os_ip_batch_api([n]).get(uuid, "N / A")
+        bmc_ip = get_bmc_ip(n)
+
+        history = []
+        try:
+            hr = requests.get(f"{IRONIC_BASE_URL}/nodes/{uuid}/history", headers=IRONIC_HEADERS)
+            if hr.ok:
+                events = hr.json().get("history", [])
+                # Most recent first, cap it so the popup stays a glance not a log dump.
+                history = sorted(events, key=lambda e: e.get("created_at") or "", reverse=True)[:15]
+        except: pass
+
+        # node.properties (cpus/memory_mb/local_gb) is an ironic-inspector-era
+        # concept and stays empty with inspect_interface=agent (verified live
+        # against this box — even an already-inspected node's properties only
+        # ever carries cpu_arch). The real per-node hardware detail lives in
+        # the introspection inventory instead — same data `baremetal node
+        # inventory save` prints — so pull that and reshape it into a few
+        # human-readable fields instead of trusting properties.
+        inventory = {}
+        try:
+            inv_headers = IRONIC_HEADERS.copy()
+            inv_headers["X-OpenStack-Ironic-API-Version"] = "1.81"  # min version for /inventory
+            ir = requests.get(f"{IRONIC_BASE_URL}/nodes/{uuid}/inventory", headers=inv_headers)
+            if ir.ok:
+                inventory = ir.json().get("inventory") or {}
+        except: pass
+
+        def clean_gb(gb):
+            # Round to 1 decimal, but print "50" instead of "50.0" when exact.
+            if gb is None:
+                return None
+            gb = round(gb, 1)
+            return int(gb) if gb == int(gb) else gb
+
+        def bytes_to_gb(n_bytes):
+            return clean_gb(n_bytes / (1024 ** 3)) if n_bytes else None
+
+        cpu = inventory.get("cpu") or {}
+        memory = inventory.get("memory") or {}
+        memory_mb = memory.get("physical_mb")
+        memory_gb = clean_gb(memory_mb / 1024) if memory_mb else None
+
+        disks = [{
+            "name": d.get("name"),
+            "size_gb": bytes_to_gb(d.get("size")),
+            "vendor": d.get("vendor"),
+            "serial": d.get("serial"),
+        } for d in (inventory.get("disks") or [])]
+
+        interfaces = [{
+            "name": i.get("name"),
+            "mac_address": i.get("mac_address"),
+            "ipv4_address": i.get("ipv4_address"),
+        } for i in (inventory.get("interfaces") or [])]
+
+        return {
+            "ok": True,
+            "node": {
+                "uuid": n.get("uuid"),
+                "name": n.get("name"),
+                "driver": n.get("driver"),
+                "resource_class": n.get("resource_class"),
+                "power_state": n.get("power_state"),
+                "provision_state": n.get("provision_state"),
+                "maintenance": bool(n.get("maintenance")),
+                "maintenance_reason": n.get("maintenance_reason"),
+                "last_error": n.get("last_error"),
+                "instance_info": n.get("instance_info") or {},
+                "created_at": n.get("created_at"),
+                "updated_at": n.get("updated_at"),
+                "os_ip": os_ip,
+                "bmc_ip": bmc_ip,
+            },
+            "inventory": {
+                "cpu_model": cpu.get("model_name"),
+                "cpu_arch": cpu.get("architecture"),
+                "memory_gb": memory_gb,
+                "disks": disks,
+                "interfaces": interfaces,
+            },
+            "history": history,
+        }
+    except Exception as e:
+        return {"ok": False, "error": str(e)}
+
 @app.get("/api/stats")
 def get_stats():
     try:
@@ -704,4 +803,12 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 @app.get("/")
 def read_root(): return FileResponse(os.path.join(BASE_DIR, "index.html"))
 
-app.mount("/", StaticFiles(directory=BASE_DIR), name="static")
+# Only the frontend's own asset folders are exposed here — NOT a mount of
+# BASE_DIR itself. Mounting "/" -> BASE_DIR used to serve the entire repo
+# root as static files (server/main.py source, ironic.conf, redfish_creds.json,
+# mac_list.txt, .git/ with old plaintext secrets in history, logs, etc. were
+# all publicly GET-able on this port). Add new static dirs here explicitly
+# if the frontend grows one — never re-mount BASE_DIR directly.
+app.mount("/css", StaticFiles(directory=os.path.join(BASE_DIR, "css")), name="css")
+app.mount("/js", StaticFiles(directory=os.path.join(BASE_DIR, "js")), name="js")
+app.mount("/icon", StaticFiles(directory=os.path.join(BASE_DIR, "icon")), name="icon")

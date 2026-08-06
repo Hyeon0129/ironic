@@ -78,6 +78,54 @@
     </div>
   </div>
 
+  <!-- Node Detail Modal (click any table row) -->
+  <div class="modal-backdrop" id="nodeDetailModal">
+    <div class="modal-panel" style="width:min(920px,92vw); max-height:85vh; display:flex; flex-direction:column; overflow:hidden;">
+      <div class="modal-header">
+        <div class="modal-title">Node Detail</div>
+        <button class="modal-close" id="nodeDetailClose">Close</button>
+      </div>
+      <div class="modal-body" style="display:flex; gap:20px; flex:1; min-height:0; overflow:hidden;">
+        <div style="flex:1 1 55%; min-width:0; overflow-y:auto; overflow-x:hidden;">
+          <div class="modal-grid">
+            <div class="modal-label">Node Name</div>
+            <div class="modal-value" id="nd_name"></div>
+            <div class="modal-label">UUID</div>
+            <div class="modal-value" id="nd_uuid"></div>
+            <div class="modal-label">Power State</div>
+            <div class="modal-value" id="nd_power"></div>
+            <div class="modal-label">Provision State</div>
+            <div class="modal-value" id="nd_provision"></div>
+            <div class="modal-label">Maintenance</div>
+            <div class="modal-value" id="nd_maintenance"></div>
+            <div class="modal-label">OS IP</div>
+            <div class="modal-value" id="nd_osip"></div>
+            <div class="modal-label">BMC IP</div>
+            <div class="modal-value" id="nd_bmcip"></div>
+            <!-- Populated from Ironic's introspection inventory (same data as
+                 `baremetal node inventory save`), not node.properties — see
+                 renderInventory() in js/main.js. display:contents so these
+                 rows join the surrounding .modal-grid instead of boxing
+                 themselves off. Replaces the old standalone MAC row — NIC
+                 here already carries the MAC (plus interface name). Empty
+                 until the node is inspected. -->
+            <div id="nd_inventory" style="display:contents;"></div>
+            <div class="modal-label">Driver</div>
+            <div class="modal-value" id="nd_driver"></div>
+            <div class="modal-label">Deployed Image</div>
+            <div class="modal-value" id="nd_image"></div>
+            <div class="modal-label">Last Error</div>
+            <div class="modal-value" id="nd_lasterror"></div>
+          </div>
+        </div>
+        <div style="flex:1 1 45%; min-width:0; display:flex; flex-direction:column; border-left:1px solid rgba(255,255,255,.08); padding-left:20px; overflow:hidden;">
+          <div class="alarm-header" style="margin-bottom:8px; flex-shrink:0;">Recent History</div>
+          <div id="nd_history" style="flex:1; min-height:0; overflow-y:auto; overflow-x:hidden;"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <aside class="sidebar" aria-label="Sidebar">
     <div class="scroll">
       <div class="x2i-logo" style="cursor:pointer; justify-content: center; padding: 1px 0;" onclick="window.location.href='/'">
@@ -99,11 +147,15 @@
           <span class="name">RAID Configuration</span>
         </div>
         <div class="chat task-item" data-action="manage">
-          <i class="bi bi-tools"></i> 
+          <i class="bi bi-tools"></i>
           <span class="name">Manage</span>
         </div>
+        <div class="chat task-item" data-action="inspect">
+          <i class="bi bi-search"></i>
+          <span class="name">Inspect</span>
+        </div>
         <div class="chat task-item" data-action="provide">
-          <i class="bi bi-box-arrow-in-right"></i> 
+          <i class="bi bi-box-arrow-in-right"></i>
           <span class="name">Provide</span>
         </div>
         <div class="chat task-item" data-action="deploy">

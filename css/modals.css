@@ -205,6 +205,23 @@ font-size: 10px;
 font-weight: bold;
 }
 
+/* Same size/shape as .alarm-item-icon, but the glyph is real text content
+   (set per-entry in JS) instead of a fixed ::after, so it can change with
+   severity — used by the Node Detail modal's history list. */
+.nd-history-icon {
+width: 24px;
+height: 24px;
+flex-shrink: 0;
+display: flex;
+align-items: center;
+justify-content: center;
+border-radius: 50%;
+color: white;
+font-size: 11px;
+font-weight: bold;
+line-height: 1;
+}
+
 .alarm-item-content {
 flex: 1;
 }

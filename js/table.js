@@ -210,6 +210,16 @@ if(pagerEl) pagerEl.addEventListener("click", e=>{
   render();
 });
 
+// Click a row (but not its checkbox or the maintenance toggle button) to
+// open the Node Detail modal. Delegated on the (stable) tbody element since
+// render() replaces the rows' innerHTML every poll.
+const qcTableBody = document.querySelector("#qcTable tbody");
+if (qcTableBody) qcTableBody.addEventListener("click", e => {
+  if (e.target.closest(".row-checkbox") || e.target.closest("button")) return;
+  const tr = e.target.closest("tr[data-uuid]");
+  if (tr && typeof window.openNodeDetail === "function") window.openNodeDetail(tr.dataset.uuid);
+});
+
 async function fetchRowsFromApi() {
   try {
     const res = await fetch('/api/servers');
