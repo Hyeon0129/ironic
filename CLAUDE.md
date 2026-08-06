@@ -22,7 +22,7 @@ OpenStack Ironic(Bifrost 경량 환경)을 제어하여 베어메탈 서버의 �
 
 ## 주요 기능 (메뉴 구성)
 - **Ironic Actions (노드 액션):** 전원 관리, 노드 상태 제어(Manage, Provide, Deploy, Clean 등), 노드 이름 변경, 삭제 등.
-- **Image & Assets:** 사이드바에서 비활성화(주석 처리)된 상태. 과거 존재했던 `/builder`(OS Builder), `/cloud-init`(User-Data Gen) 단독 페이지와 관련 백엔드 라우트는 2026-07-13에 완전히 제거됨 — 필요 시 git 이력(커밋 이전 `builder.html`/`cloud-init.html`, `server/main.py`의 `/builder`·`/cloud-init` 라우트)에서 복원 가능.
+- **Image & Assets 완전 삭제(2026-08-06):** 이미지는 이제 별도 프로그램으로 빌드하므로, 대시보드 내 OS Builder/Cloud-init 생성기/Asset Manager(업로드·삭제) 기능은 구버전 취급하여 프론트(`index.html`의 주석 처리된 사이드바 블록, `unifiedBuilderModal`, `assetManagerModal`)와 백엔드(`server/main.py`의 `/api/ssh-keys`, `/api/assets/build*`, `/api/assets/userdata`, `/api/assets`, `/api/assets/upload`, `/api/assets/{type}/{filename}`) 전부 제거. `js/actions.js`도 관련 죽은 함수(`startBuildImage`, `refreshAssets`, `addPartitionRow` 등) 다 정리됨. 이미지/유저데이터 파일은 이제 `/var/lib/ironic/httpboot/images`, `/var/lib/ironic/httpboot/user-data`에 외부에서 직접 배치하고, 대시보드는 `/api/deploy_files`로 그 디렉토리 목록만 읽어 Deploy 모달 드롭다운에 보여줌 — 이 목록/Deploy 흐름만 유지됨. (과거 `/builder`, `/cloud-init` 단독 페이지 라우트는 이미 2026-07-13에 제거된 상태였음.)
 
 ## 시크릿 관리
 - `redfish_creds.json`(BMC 자격 증명), `ironic.conf`(DB/service-catalog 비밀번호 포함) — 과거 git에 평문으로 커밋되어 있었음. 2026-07-13에 `git rm --cached` + `.gitignore` 처리로 **향후 커밋부터** 추적 제외. 단, 과거 커밋 이력에는 여전히 남아있음 (이력까지 지우려면 `git filter-repo` 등으로 별도 재작성 필요 — 원격(`Hyeon0129/ironic`)에 force-push가 필요한 민감 작업이므로 사전 협의 후 진행).
@@ -33,3 +33,4 @@ OpenStack Ironic(Bifrost 경량 환경)을 제어하여 베어메탈 서버의 �
 
 - [2026-07-13] `GEMINI.md` → `CLAUDE.md` 마이그레이션. `bak_ironic/`, `builder.html`, `cloud-init.html`(및 `server/main.py`의 관련 죽은 라우트) 완전 삭제. `redfish_creds.json`/`ironic.conf`/`uvicorn.log`/`*.pyc`를 git 추적에서 제외(`.gitignore` + `git rm --cached`), 향후 커밋부터만 반영(과거 이력엔 비밀번호 잔존, 미해결).
 - [2026-07-13] Deploy 로직 버그 수정 (`server/main.py` `/api/deploy`): `properties/root_device`를 `/dev/sda`로 강제 지정하던 코드를 제거 — VM(virtio) 등 sda가 없는 노드에서 `deploy.write_image` 단계가 "No suitable device was found for deployment using these hints {'name': '/dev/sda'}"로 실패하던 문제의 원인이었음. 이제 hint를 생략해 Ironic/IPA 자동 선택에 맡기고, 과거에 박힌 잔여 hint는 deploy 직전 조회해 자동 제거. Configdrive용 user-data 내용에서 선행 UTF-8 BOM(U+FEFF)도 제거하도록 보완.
+- [2026-08-06] Image & Assets(OS Builder, Cloud-init 생성기, Asset Manager 업로드/삭제) 기능 완전 제거 — 이미지가 이제 별도 프로그램으로 빌드되어 대시보드 내 빌드 기능이 불필요해졌음. `index.html`의 주석 처리된 사이드바 블록과 `unifiedBuilderModal`/`assetManagerModal`, `server/main.py`의 `/api/ssh-keys`·`/api/assets/build*`·`/api/assets/userdata`·`/api/assets`·`/api/assets/upload`·`/api/assets/{type}/{filename}`, `js/actions.js`의 관련 함수들을 모두 삭제. `/api/deploy_files`(Deploy 모달의 이미지/유저데이터 드롭다운용 디렉토리 목록 조회)만 유지 — 파일은 이제 `/var/lib/ironic/httpboot/images`, `.../user-data`에 외부에서 직접 배치.
