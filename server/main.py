@@ -784,9 +784,17 @@ def perform_deploy(payload: DeployPayload):
                 {"op": "add", "path": "/instance_info/image_source", "value": image_url},
                 {"op": "add", "path": "/instance_info/image_os_hash_algo", "value": algo},
                 {"op": "add", "path": "/instance_info/image_os_hash_value", "value": checksum},
-                {"op": "add", "path": "/instance_info/root_gb", "value": 0},
-                {"op": "add", "path": "/properties/root_device", "value": {"name": "/dev/sda"}}
+                {"op": "add", "path": "/instance_info/root_gb", "value": 0}
             ]
+
+            # No root_device hint is sent, so Ironic/IPA picks the first suitable
+            # disk itself instead of failing on nodes without a literal /dev/sda.
+            # Clear any stale hint left over from a previous deploy on this node.
+            try:
+                node_r = requests.get(f"{IRONIC_BASE_URL}/nodes/{uuid}", headers=IRONIC_HEADERS)
+                if node_r.ok and node_r.json().get("properties", {}).get("root_device"):
+                    patch_data.append({"op": "remove", "path": "/properties/root_device"})
+            except: pass
             
             if payload.image.lower().endswith('.raw'):
                 patch_data.append({"op": "add", "path": "/instance_info/image_disk_format", "value": "raw"})
@@ -796,8 +804,12 @@ def perform_deploy(payload: DeployPayload):
                 user_data_path = os.path.join(HTTPBOOT_DIR, "user-data", payload.user_data)
                 cat_out = subprocess.run(["sudo", "-n", "cat", user_data_path], capture_output=True, text=True)
                 if cat_out.returncode == 0:
-                    # CLI used a json file content. Usually {"user_data": "..."}
-                    configdrive_obj = {"user_data": cat_out.stdout}
+                    # Strip a leading UTF-8 BOM (e.g. Windows-authored .ps1 files),
+                    # matching the encoding='utf-8-sig' behavior used to build configdrive.json manually.
+                    userdata = cat_out.stdout
+                    if userdata.startswith('\ufeff'):
+                        userdata = userdata[1:]
+                    configdrive_obj = {"user_data": userdata}
                     patch_data.append({"op": "add", "path": "/instance_info/configdrive", "value": configdrive_obj})
             except: pass
 
