@@ -3,3 +3,5 @@ uvicorn[standard]==0.30.1
 PyMySQL==1.1.1
 pydantic==2.7.1
 requests==2.31.0
+pywinrm==0.4.3
+pycryptodome==3.23.0

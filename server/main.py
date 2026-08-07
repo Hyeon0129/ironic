@@ -421,7 +421,7 @@ def perform_action(payload: ActionPayload):
                         ]
                     }
                     requests.put(url, headers=IRONIC_HEADERS, json=clean_payload)
-                elif payload.action in ["manage", "provide", "abort", "rebuild", "inspect"]:
+                elif payload.action in ["manage", "provide", "abort", "rebuild"]:
                     url = f"{IRONIC_BASE_URL}/nodes/{uuid_node}/states/provision"
                     requests.put(url, headers=IRONIC_HEADERS, json={"target": payload.action})
                 elif payload.action == "undeploy":
@@ -802,6 +802,26 @@ def get_stats():
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 @app.get("/")
 def read_root(): return FileResponse(os.path.join(BASE_DIR, "index.html"))
+
+# Windows QC dashboard (ex-"sangsang" standalone app), integrated as a second
+# page under /qc — see server/qc/. Its RPC (/api/<method>) + SSE (/events)
+# routes; the static mount right below serves its own web/ page+assets.
+from server.qc.routes import router as qc_router
+app.include_router(qc_router)
+
+class NoCacheStaticFiles(StaticFiles):
+    """Plain StaticFiles sends only Last-Modified/ETag — no Cache-Control —
+    which several browsers/sessions ended up treating as "cache indefinitely,
+    never revalidate" for index.html itself (unlike style.css/app.js, its URL
+    has no ?v= to force a fresh fetch, so edits here kept looking invisible
+    even after a normal reload). Forcing Cache-Control: no-cache makes the
+    browser always revalidate with the server on every request instead."""
+    async def get_response(self, path, scope):
+        response = await super().get_response(path, scope)
+        response.headers["Cache-Control"] = "no-cache, must-revalidate"
+        return response
+
+app.mount("/qc", NoCacheStaticFiles(directory=os.path.join(BASE_DIR, "server", "qc", "web"), html=True), name="qc_web")
 
 # Only the frontend's own asset folders are exposed here — NOT a mount of
 # BASE_DIR itself. Mounting "/" -> BASE_DIR used to serve the entire repo

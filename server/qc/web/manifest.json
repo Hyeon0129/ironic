@@ -1,0 +1,9 @@
+{
+  "name": "SuperSolution",
+  "short_name": "SuperSolution",
+  "start_url": "/",
+  "display": "standalone",
+  "icons": [
+    { "src": "logo.png", "sizes": "2160x660", "type": "image/png" }
+  ]
+}

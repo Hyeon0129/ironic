@@ -1,0 +1,143 @@
+<title>SuperSolution</title>
+<link rel="icon" type="image/x-icon" href="favicon.ico">
+<link rel="manifest" href="manifest.json">
+<link rel="stylesheet" href="style.css?v=15">
+
+<!-- Same decorative backdrop as the main Ironic dashboard's .bg (index.html) —
+     color/atmosphere unification only, doesn't affect any item's position. -->
+<div class="bg" aria-hidden="true"></div>
+
+<div id="app">
+  <div class="app-shell">
+    <aside class="sidebar">
+      <div class="sidebar-brand">
+        <img class="brand-mark brand-mark-full" src="logo.png" alt="Super Solution">
+      </div>
+      <!-- 사이드바 내용은 고정 마크업이 아니라 서버의 get_sidebar_config()(레지스트리+업체
+           프로필을 합친 결과)를 app.js가 받아 그려 넣는다 — renderSidebar() 참고. -->
+      <nav class="sidebar-nav"></nav>
+    </aside>
+    <div class="main-content">
+  <header class="topbar">
+    <div class="stat-chip" id="stat-chip">서버 0대</div>
+    <div class="cred-group">
+      <div class="cred-field">
+        <label>업체</label>
+        <button class="btn btn-ghost btn-sm profile-select-btn" id="profile-select-btn" type="button">
+          <span id="profile-select-label">–</span>
+        </button>
+      </div>
+      <div class="cred-field">
+        <label>매출번호</label>
+        <input id="cred-sales" class="field small" />
+      </div>
+      <div class="cred-field">
+        <label>계정</label>
+        <input id="cred-user" class="field tiny" autocomplete="off" />
+      </div>
+      <div class="cred-field">
+        <label>PW</label>
+        <input id="cred-pass" class="field tiny" type="password" autocomplete="new-password" />
+      </div>
+      <button class="btn btn-invert btn-sm" id="btn-apply-cred" data-icon="check">적용</button>
+      <!-- Work log is hidden by default (see .log-panel below) — this is the
+           only way to reach it: opens a separate browser window (?logonly=1),
+           same idea as the original desktop app's native detached log window. -->
+      <button class="btn btn-ghost btn-sm" id="btn-open-log" data-icon="list">로그 창 열기</button>
+      <button class="btn btn-ghost btn-sm" id="btn-settings" data-icon="settings">설정</button>
+    </div>
+  </header>
+
+  <!-- Card wrapper matching the main dashboard's "Baremetal Nodes" panel
+       (.qc-panel, css/components.css:2-10) — glass background/border/shadow/
+       radius, exactly. Only this container is new; the toolbar buttons and
+       table columns inside are QC's own components, unchanged. -->
+  <div class="qc-panel">
+  <!-- Two-row header, matching the main dashboard's "Baremetal Nodes" panel:
+       title + search on top (.qc-head), action buttons + Show/entries below
+       (.toolbar) — instead of everything crammed into one dense row. -->
+  <!-- Title removed (was "등록된 서버") — search only, right-aligned. -->
+  <div class="qc-head" style="justify-content: flex-end;">
+    <div class="search-box">
+      <span data-icon="search"></span>
+      <input id="srv-search" placeholder="컴퓨터명, IP, 시리얼 검색" />
+    </div>
+  </div>
+  <div class="toolbar">
+    <!-- Servers will be auto-registered from Ironic's own node list (same
+         source as the main dashboard's Baremetal Nodes table) instead of
+         being typed in by hand — 추가/일괄추가/파일로드 all removed. This
+         "Query" button is the same idea as the main dashboard's (which
+         scans/registers nodes) — UI only for now, wiring comes later. -->
+    <div class="page-size-group">
+      <span>Show</span>
+      <select class="field" id="page-size-select">
+        <option value="10">10</option>
+        <option value="20">20</option>
+        <option value="40">40</option>
+      </select>
+      <span>entries</span>
+      <button class="btn" id="btn-query" style="margin-left: 10px; padding: 6px 12px;">Query</button>
+    </div>
+    <div class="divider-v"></div>
+    <div class="toolbar-group">
+      <button class="btn btn-danger" id="btn-del-server" data-icon="trash">삭제</button>
+    </div>
+    <div class="divider-v"></div>
+    <div class="toolbar-group">
+      <button class="btn" id="btn-capture" data-icon="camera">캡처</button>
+    </div>
+  </div>
+
+  <main class="table-wrap">
+    <table class="srv-table">
+      <thead>
+        <tr>
+          <th style="width:30px"><span class="chk-box" id="chk-select-all"><svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span></th>
+          <th data-label="전원"><span class="th-label th-label-btn" id="th-power" data-icon="power"></span></th>
+          <th class="left" data-label="컴퓨터명"><span class="th-label" data-icon="monitor"></span></th>
+          <th data-label="IP"><span class="th-label" data-icon="globe"></span></th>
+          <th data-label="Ping"><span class="th-label" data-icon="activity"></span></th>
+          <th data-label="WinRM"><span class="th-label" data-icon="plug"></span></th>
+          <th data-label="CPU"><span class="th-label" data-icon="cpu"></span></th>
+          <th data-label="RAM"><span class="th-label" data-icon="memory"></span></th>
+          <th data-label="GPU"><span class="th-label" data-icon="gpu"></span></th>
+          <th data-label="NIC" id="th-nic"><span class="th-label" data-icon="network"></span></th>
+          <!-- 업체 프로필에 따라 필요한 컬럼(예: 기린의 부팅/볼륨)이 이 뒤에 동적으로 삽입됨 —
+               applyProfileTableColumns() 참고. -->
+          <th data-label="인증"><span class="th-label" data-icon="shield"></span></th>
+          <th data-label="QC"><span class="th-label" data-icon="clipboardCheck"></span></th>
+          <th data-label="장치"><span class="th-label" data-icon="boxes"></span></th>
+          <th data-label="캡처"><span class="th-label" data-icon="camera"></span></th>
+        </tr>
+      </thead>
+      <tbody id="tbody"></tbody>
+    </table>
+    <div class="empty-state" id="empty-state" style="display:none">
+      <span class="icon-wrap" data-icon="boxes"></span>
+      <b>등록된 서버가 없습니다</b>
+      <span>상단의 "추가" 또는 "일괄추가"로 서버를 등록하세요</span>
+    </div>
+    <div class="table-pager" id="table-pager" style="display:none"></div>
+  </main>
+  </div>
+
+  <footer class="log-panel" id="log-panel">
+    <div class="log-resize-handle" id="log-resize-handle"></div>
+    <div class="log-header">
+      <span class="title" data-icon="list">작업 로그</span>
+      <div>
+        <button class="btn btn-ghost btn-sm" id="btn-log-export" data-icon="folder">추출</button>
+        <button class="btn btn-ghost btn-sm" id="btn-log-clear" data-icon="trash">지우기</button>
+      </div>
+    </div>
+    <div class="log-body" id="log-body"></div>
+  </footer>
+    </div>
+  </div>
+</div>
+
+<div id="toast-stack"></div>
+<div id="modal-root"></div>
+
+<script src="app.js"></script>

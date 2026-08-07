@@ -48,6 +48,12 @@ function initSidebarListeners() {
       }
     });
   });
+
+  // Windows QC ("sangsang") is now integrated server-side (server/qc/) as a
+  // second page in this same app — just navigate there, no separate port.
+  document.getElementById('qcToolLink')?.addEventListener('click', () => {
+    window.location.href = '/qc/';
+  });
 }
 
 // Initialize page

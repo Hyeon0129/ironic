@@ -7,3 +7,4 @@ run_core.log
 redfish_creds.json
 ironic.conf
 .claude/
+qc_data/

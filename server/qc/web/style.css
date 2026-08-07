@@ -1,0 +1,939 @@
+:root {
+  /* 색상만 메인 Ironic 대시보드(css/style.css, css/table.css, css/modals.css)
+     팔레트에 맞춤(2026-08-06) — 변수 "이름"과 그걸 쓰는 나머지 규칙들(크기/위치/폰트)은
+     전혀 안 건드림. 값만 바꿔서 이 파일 전체(레이아웃 그대로)가 자동으로 새 색으로 칠해짐. */
+  --bg: #0a0e16;
+  --panel: #0f1420;
+  --surface: #131826;
+  --surface-2: #161c2c;
+  --card: #151a29;
+  --card-hover: #1c2338;
+  --border: rgba(255, 255, 255, .10);
+  --border-strong: rgba(255, 255, 255, .16);
+  --border-soft: rgba(255, 255, 255, .055);
+  --text: #e2e8f0;
+  --text-dim: #9ca3af;
+  --text-mute: #64748b;
+  --accent: #3b82f6;
+  --accent-hover: #60a5fa;
+  --accent-bg: rgba(59, 130, 246, .14);
+  --accent-ring: rgba(59, 130, 246, .38);
+  --green: #22c55e;
+  --green-bg: rgba(34, 197, 94, .12);
+  --red: #ef4444;
+  --red-bg: rgba(239, 68, 68, .12);
+  --yellow: #eab308;
+  --yellow-bg: rgba(234, 179, 8, .12);
+  --radius: 10px;
+  --radius-sm: 8px;
+  --radius-lg: 16px;
+  --shadow-modal: 0 30px 80px rgba(0, 0, 0, .6), 0 2px 12px rgba(0, 0, 0, .4);
+  --shadow-toast: 0 12px 32px rgba(0, 0, 0, .5);
+  --shadow-btn: 0 1px 0 rgba(255, 255, 255, .04) inset, 0 1px 2px rgba(0, 0, 0, .3);
+  /* Exact main dashboard font stack (css/style.css body{font-family}) — was
+     "Segoe UI Variable" first, which isn't what the main dashboard uses. */
+  --font: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans KR", Inter, Helvetica, Arial, sans-serif;
+  --mono: "Cascadia Code", "Consolas", "SFMono-Regular", monospace;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0; padding: 0; height: 100%;
+  /* var(--bg) is still the fallback color, but .bg (below) paints the same
+     gradient backdrop the main dashboard uses — transparent here so it shows
+     through instead of being hidden behind a flat fill. */
+  background: transparent; color: var(--text);
+  font-family: var(--font);
+  font-size: 13px;
+  -webkit-font-smoothing: antialiased;
+  overflow: hidden;
+  user-select: none;
+}
+
+/* Same decorative backdrop as the main dashboard's .bg (css/style.css) —
+   identical gradient/blur values, dark theme only (this page has no light
+   theme). Fixed + z-index:-1, so it never affects layout/positions. */
+.bg {
+  position: fixed; inset: 0;
+  width: 100vw; height: 100vh;
+  overflow: hidden; z-index: -1; pointer-events: none;
+}
+.bg::before {
+  content: "";
+  position: absolute;
+  top: -336px; right: -336px; bottom: -336px; left: -336px;
+  background:
+    radial-gradient(circle at 50% 50%, rgba(120,177,255,.25), transparent 45%),
+    radial-gradient(circle at 50% 50%, rgba(165,141,255,.18), transparent 65%),
+    radial-gradient(ellipse at 5% 30%, rgba(120,119,198,.2), transparent 60%),
+    radial-gradient(ellipse at 10% 70%, rgba(165,141,255,.15), transparent 50%),
+    radial-gradient(ellipse at top, rgba(120,119,198,.35), transparent 75%),
+    radial-gradient(ellipse at bottom left, rgba(255,119,198,.25), transparent 75%),
+    radial-gradient(ellipse at bottom right, rgba(255,206,84,.25), transparent 75%),
+    radial-gradient(ellipse at center right, rgba(120,255,198,.18), transparent 75%),
+    radial-gradient(ellipse at 20% 80%, rgba(165,141,255,.12), transparent 55%),
+    radial-gradient(ellipse at 80% 20%, rgba(120,177,255,.15), transparent 55%),
+    linear-gradient(135deg, #0F172A, #1E293B);
+  filter: brightness(0.9) contrast(1.1) saturate(1.0) blur(40px);
+}
+/* Was missing entirely on the first pass — main dashboard layers this vignette
+   darkening on top of .bg::before (css/style.css .bg::after), same values. */
+.bg::after {
+  content: "";
+  position: absolute;
+  top: -336px; right: -336px; bottom: -336px; left: -336px;
+  background:
+    linear-gradient(
+      to bottom,
+      rgba(0,0,0,0) 0%,
+      rgba(0,0,0,0) 42%,
+      rgba(0,0,0,.16) 56%,
+      rgba(0,0,0,.34) 76%,
+      rgba(0,0,0,.52) 100%
+    ),
+    radial-gradient(160% 115% at 40% 118%, rgba(0,0,0,.58) 52%, transparent 90%),
+    linear-gradient(to bottom, rgba(0,0,0,0) 0%, rgba(0,0,0,.25) 40%, rgba(0,0,0,.45) 80%);
+  filter: blur(14px); /* calc(40px * .35) from the main dashboard's var(--bg-blur)*.35 */
+}
+
+::selection { background: var(--accent); color: #fff; }
+button { font-family: inherit; }
+
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 6px; border: 2px solid transparent; background-clip: padding-box; }
+::-webkit-scrollbar-thumb:hover { background: #3c3c46; background-clip: padding-box; }
+
+.icon { width: 14px; height: 14px; flex-shrink: 0; display: block; }
+.icon-sm { width: 12px; height: 12px; }
+.icon-xs { width: 10px; height: 10px; }
+
+#app {
+  display: flex;
+  height: 100vh;
+  overflow: hidden;
+  background: transparent; /* was var(--bg) — let .bg's gradient show through */
+}
+
+.app-shell { display: flex; height: 100%; width: 100%; }
+
+/* ── Sidebar (Docker Desktop/Claude 스타일 좌측 네비게이션) ──
+   조회/작업/캡처 버튼을 상단 가로 액션바 대신 여기로 옮겨서, 넓은 테이블에 가로 공간을
+   더 주고 "앱"다운 구조(고정 사이드바 + 메인 콘텐츠)를 갖춘다. */
+.sidebar {
+  width: 198px; flex-shrink: 0;
+  display: flex; flex-direction: column;
+  /* Same translucent gradient as the main dashboard's .sidebar (css/sidebar.css)
+     — was a solid var(--bg) fill, which fully hid the .bg backdrop behind it. */
+  background: linear-gradient(to bottom, rgba(0,0,0,.35) 0%, rgba(0,0,0,.25) 60%, rgba(0,0,0,.45) 100%);
+  border-right: 1px solid var(--border);
+}
+.sidebar-brand {
+  display: flex; align-items: center; gap: 9px;
+  height: 60px; min-height: 60px;
+  padding: 0 16px;
+  /* border-bottom removed — main dashboard's topbar has no divider line either */
+  -webkit-app-region: drag;
+}
+.sidebar-brand .brand-mark { height: 31px; width: auto; max-width: 100%; object-fit: contain; }
+
+.sidebar-nav { flex: 1; min-height: 0; overflow-y: auto; padding: 12px 10px; }
+.nav-section { margin-bottom: 6px; }
+.nav-section:last-child { margin-bottom: 0; }
+
+/* 섹션 제목 = 펼치기/접기 버튼. 굵은 흰 글자로 눈에 띄게 하고, 우측 셰브런은 접혔을 때
+   -90도 회전시켜서 상태를 표시한다. */
+.nav-section-label {
+  display: flex; align-items: center; gap: 6px; width: 100%;
+  border: none; background: transparent; cursor: pointer;
+  font-size: 13px; font-weight: 700; color: var(--text);
+  letter-spacing: .2px; font-family: inherit;
+  padding: 8px 10px 6px;
+  text-align: left;
+}
+.nav-section-label span { flex: 1; }
+.nav-section-label .icon {
+  color: var(--text-mute); width: 12px; height: 12px;
+  transition: transform .15s ease;
+}
+.nav-section-label:hover .icon { color: var(--text-dim); }
+.nav-section.collapsed .nav-section-label .icon { transform: rotate(-90deg); }
+.nav-section-items { display: flex; flex-direction: column; overflow: hidden; }
+.nav-section.collapsed .nav-section-items { display: none; }
+.nav-item {
+  display: flex; align-items: center; gap: 10px;
+  width: 100%; padding: 8px 10px;
+  border: none; background: transparent;
+  border-radius: var(--radius-sm);
+  color: var(--text-dim);
+  font-size: 11.5px; font-weight: 500;
+  font-family: inherit;
+  text-align: left; cursor: pointer;
+  transition: background .12s ease, color .12s ease;
+}
+.nav-item span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.nav-item .icon { color: var(--text-mute); flex-shrink: 0; transition: color .12s ease; }
+.nav-item:hover { background: var(--card-hover); color: var(--text); }
+.nav-item:hover .icon { color: var(--accent); }
+.nav-item:active { background: var(--card); }
+.nav-item:focus-visible { outline: 2px solid var(--accent-ring); outline-offset: -2px; }
+
+/* ── 메인 콘텐츠(사이드바 오른쪽 전체) ──────────────────── */
+.main-content {
+  flex: 1; min-width: 0;
+  display: flex; flex-direction: column;
+  overflow: hidden;
+  background: transparent; /* was var(--bg) — let .bg's gradient show through here too */
+}
+
+/* Card wrapper around toolbar+table+pager, matching the main dashboard's
+   "Baremetal Nodes" panel exactly (css/components.css .qc-panel:2-10) — the
+   main dashboard's table always sits inside this kind of card, not directly
+   on the page background. */
+.qc-panel {
+  flex: 1; min-height: 0; display: flex; flex-direction: column;
+  margin: 12px 18px 14px;
+  /* Was missing its own padding entirely (only the 6px on .toolbar/.table-wrap
+     below), which is why content sat flush against the card edge — main
+     dashboard's .qc-panel has padding:18px 18px 14px (css/components.css:9). */
+  padding: 18px 18px 14px;
+  background: radial-gradient(120% 120% at 50% -10%, rgba(255,255,255,.06), rgba(0,0,0,.30));
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(255,255,255,.12);
+  box-shadow: 0 20px 60px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.04);
+  border-radius: 14px;
+  overflow: hidden;
+}
+/* Title + search row, exact main dashboard .qc-head/.qc-title recipe
+   (css/components.css:13-25). */
+.qc-head { display: flex; align-items: center; justify-content: space-between; gap: 20px; padding: 6px 6px 2px; flex-shrink: 0; }
+.qc-title { font-size: 18px; font-weight: 700; letter-spacing: .2px; color: rgba(238,242,250,.96); }
+.qc-panel .toolbar { padding: 12px 6px; flex-shrink: 0; }
+
+
+/* ── Topbar ─────────────────────────────────────────── */
+.topbar {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  height: 60px;
+  min-height: 60px;
+  padding: 0 20px;
+  background: transparent; /* was var(--bg) — main dashboard's topbar has no fill either */
+  /* border-bottom removed — matches main dashboard's topbar (no divider line) */
+  -webkit-app-region: drag;
+}
+.cred-group { display: flex; align-items: center; gap: 6px; -webkit-app-region: no-drag; justify-content: flex-end; flex: 1; }
+.cred-field { display: flex; align-items: center; gap: 6px; }
+/* Was var(--text-mute) (#64748b) — too dim against the new backdrop. Matches
+   the main dashboard's own small field labels (.modal-label: rgba(184,194,210,.9)). */
+.cred-field label { font-size: 10.5px; color: rgba(203,213,225,.85); font-weight: 600; letter-spacing: .3px; }
+
+.field {
+  /* Same recipe as the main dashboard's .qc-input-header (css/components.css:227-231). */
+  background: linear-gradient(135deg, rgba(255,255,255,.04), rgba(0,0,0,.25));
+  border: 1px solid rgba(255,255,255,.10);
+  color: var(--text);
+  border-radius: var(--radius-sm);
+  padding: 6.5px 10px;
+  font-size: 12.5px;
+  outline: none;
+  transition: border-color .15s ease, box-shadow .15s ease;
+}
+.field::placeholder { color: var(--text-mute); }
+.field:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-bg); }
+.field.small { width: 74px; }
+.field.tiny { width: 54px; }
+
+/* 업체 프로필 선택 — 네이티브 <select>는 폭/정렬을 브라우저마다 다르게(때로는 CSS를 무시하고)
+   그려서, 대신 기존 action-menu 팝오버(전원 아이콘의 재부팅/종료 메뉴와 동일한 컴포넌트)를
+   재사용하는 버튼으로 만든다. 버튼은 .btn 그대로라 내용 길이에 맞춰 자연스럽게 늘고 줄고,
+   텍스트도 중앙에 온다. */
+.profile-select-btn { gap: 6px; }
+.profile-select-btn::after {
+  content: "";
+  width: 6px; height: 6px;
+  border-right: 1.5px solid currentColor;
+  border-bottom: 1.5px solid currentColor;
+  transform: rotate(45deg) translateY(-2px);
+  opacity: .6;
+}
+
+.spacer { flex: 1; }
+
+/* ── Buttons ────────────────────────────────────────── */
+/* 100% the main dashboard's .qc-btn.primary (the "Query" button next to Show
+   entries in its table toolbar) — css/components.css:33-109, property for
+   property including the hover-sweep pseudo-element and lift/glow on hover. */
+.btn {
+  -webkit-app-region: no-drag;
+  display: inline-flex; align-items: center; gap: 7px;
+  appearance: none;
+  border: 1px solid rgba(120,177,255,.25);
+  background: linear-gradient(135deg, rgba(78,130,255,.15), rgba(165,141,255,.10));
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  color: rgba(238,242,250,.95); /* was var(--text-dim) (#9ca3af) — measured off the live Query button */
+  padding: 7px 13px;
+  border-radius: 12px; /* was var(--radius-sm)=8px — .qc-btn uses 12px */
+  font-size: 12px;
+  font-weight: 600; /* was 500 */
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+  transition: all .3s cubic-bezier(.4,0,.2,1);
+  box-shadow: 0 4px 16px rgba(78,130,255,.1), inset 0 1px 0 rgba(255,255,255,.1), 0 0 0 1px rgba(120,177,255,.05);
+  white-space: nowrap;
+}
+.btn::before {
+  content: "";
+  position: absolute; top: 0; left: -100%; width: 100%; height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(120,177,255,.2), rgba(165,141,255,.15), rgba(120,177,255,.2), transparent);
+  transition: left .5s ease;
+}
+.btn:hover::before { left: 100%; }
+.btn .icon { color: var(--text-mute); transition: color .12s ease; }
+.btn:hover {
+  background: linear-gradient(135deg, rgba(78,130,255,.25), rgba(165,141,255,.15));
+  border-color: rgba(120,177,255,.35);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(78,130,255,.2), inset 0 1px 0 rgba(255,255,255,.15), 0 0 0 1px rgba(120,177,255,.1), 0 0 20px rgba(165,141,255,.15);
+  color: rgba(255,255,255,.98); /* was var(--text) — matches .qc-btn:hover exactly */
+}
+.btn:hover .icon { color: var(--accent); }
+.btn:active {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(78,130,255,.25), inset 0 2px 4px rgba(0,0,0,.1);
+}
+.btn:disabled { opacity: .4; cursor: not-allowed; }
+.btn:focus-visible { outline: 2px solid var(--accent-ring); outline-offset: 1px; }
+
+.btn-ghost { background: transparent; border-color: transparent; box-shadow: none; color: var(--text-dim); }
+.btn-ghost:hover { background: var(--card); color: var(--text); }
+
+/* Primary: solid off-white, dark text — reserved for the one clear forward action (matches reference "Next") */
+.btn-invert {
+  background: #f2f2f4; border-color: #f2f2f4; color: #101013; box-shadow: none; font-weight: 600;
+}
+.btn-invert .icon { color: #101013; }
+.btn-invert:hover { background: #ffffff; border-color: #ffffff; }
+
+/* Highlight: the single standout call-to-action row can use this (e.g. QC 실행) —
+   was a violet family (old --accent: #7071f2); shifted to the new blue accent. */
+.btn-highlight {
+  background: linear-gradient(180deg, #1e3a63, #142942);
+  border-color: rgba(59,130,246,.5);
+  color: #cfe3ff;
+}
+.btn-highlight .icon { color: #93c5fd; }
+.btn-highlight:hover { background: linear-gradient(180deg, #25476f, #1b3350); border-color: var(--accent); }
+
+/* Danger: destructive/power actions only — border/text shifted from the old
+   red family (#f87171) to the new one (--red: #ef4444). */
+.btn-danger { background: var(--red-bg); border-color: rgba(239,68,68,.28); color: #fca5a5; box-shadow: none; }
+.btn-danger .icon { color: #ef4444; }
+.btn-danger:hover { background: rgba(239,68,68,.2); }
+
+.btn-danger-solid { background: #d64545; border-color: #d64545; color: #fff; box-shadow: none; }
+.btn-danger-solid:hover { background: #e15353; border-color: #e15353; }
+.btn-danger-solid .icon { color: #fff; }
+
+.btn-sm { padding: 5.5px 10px; font-size: 11.5px; border-radius: 7px; }
+.btn-icon { padding: 6px; }
+
+/* ── Toolbar / Action bar ───────────────────────────── */
+.toolbar {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 18px;
+  background: transparent;
+  /* border-bottom removed (2nd divider line) — main dashboard has none here either */
+}
+.toolbar-group { display: flex; align-items: center; gap: 6px; }
+.divider-v { width: 1px; align-self: stretch; background: var(--border); margin: 0 4px; }
+
+.search-box {
+  display: flex; align-items: center; gap: 8px;
+  /* Same recipe as the main dashboard's #searchBox (.qc-input-header,
+     css/components.css:227-231) — glass gradient instead of a flat panel fill. */
+  background: linear-gradient(135deg, rgba(255,255,255,.04), rgba(0,0,0,.25));
+  border: 1px solid rgba(255,255,255,.10);
+  border-radius: 999px; padding: 6.5px 13px 6.5px 12px;
+  width: 240px;
+  transition: border-color .15s ease, box-shadow .15s ease;
+}
+.search-box:focus-within { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-bg); }
+.search-box .icon { color: var(--text-mute); flex-shrink: 0; }
+.search-box input {
+  flex: 1; min-width: 0; background: none; border: none; outline: none;
+  color: var(--text); font-size: 12.5px; font-family: inherit;
+}
+.search-box input::placeholder { color: var(--text-mute); }
+
+/* Text color measured off the main dashboard's .qc-toolbar-left ("Show"/"entries"). */
+.page-size-group { display: flex; align-items: center; gap: 8px; font-size: 13px; color: rgba(214,224,238,.86); }
+/* Dropdown recipe measured off the main dashboard's #rowsPerPage (.qc-select) —
+   was reusing .field's (text-input) look, which is a slightly different tint/radius. */
+.page-size-group select.field {
+  width: auto; padding: 6px 28px 6px 10px; font-size: 13px;
+  background: linear-gradient(135deg, rgba(255,255,255,.05), rgba(0,0,0,.25));
+  border: 1px solid rgba(255,255,255,.10);
+  border-radius: 8px;
+  color: rgba(238,242,250,.96);
+}
+
+.stat-chip {
+  display: flex; align-items: center; gap: 10px;
+  font-size: 11.5px; color: var(--text-dim);
+  /* Was a flat var(--panel) fill — too dark/contrasty against the new
+     translucent backdrop. Same glass-card recipe as the main dashboard's
+     stat cards (--card-bg/--card-border, css/style.css:30-31). */
+  background: linear-gradient(135deg, rgba(255,255,255,.06), rgba(0,0,0,.22));
+  border: 1px solid rgba(255,255,255,.11);
+  padding: 6.5px 13px;
+  border-radius: 999px;
+  font-variant-numeric: tabular-nums;
+}
+.stat-chip b { color: var(--text); font-weight: 600; }
+.stat-chip .stat-online { color: var(--green); font-weight: 600; }
+
+
+/* ── Table ──────────────────────────────────────────── */
+.table-wrap {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: 12px 18px 0;
+}
+/* border-collapse:separate 유지(collapse로 바꾸면 브라우저에 따라 sticky 헤더가 깨질 수
+   있음) — spacing만 0으로 줘서 행 사이 틈은 없앤다. */
+table.srv-table { width: 100%; border-collapse: separate; border-spacing: 0; }
+
+table.srv-table thead th {
+  position: sticky; top: -1px; z-index: 2;
+  /* Exact main dashboard sticky-header recipe (css/table.css .qc-table thead th:90-100) */
+  background: rgba(0,0,0,.38);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  text-align: center;
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-mute);
+  text-transform: uppercase;
+  letter-spacing: .5px;
+  padding: 11px 6px 13px;
+  border-bottom: 1px solid rgba(255,255,255,.10);
+}
+/* 헤더는 데이터 정렬(th.left = 컴퓨터명 좌측정렬)과 무관하게 아이콘을 전부 가운데 정렬한다 */
+.th-label { display: inline-flex; align-items: center; gap: 5px; justify-content: center; }
+.th-label .icon { color: var(--text-mute); width: 16px; height: 16px; }
+/* 전원 헤더 아이콘 — 클릭하면 선택된 서버 재부팅/종료 메뉴가 뜬다 */
+.th-label-btn { cursor: pointer; border-radius: 6px; padding: 3px; margin: -3px; transition: background .1s ease; }
+.th-label-btn:hover { background: var(--card-hover); }
+.th-label-btn:hover .icon { color: var(--text); }
+
+/* Docker Desktop류 참고 — 행마다 박스 테두리를 두르는 대신, 옅은 구분선 하나 + 배경색
+   변화(hover/selected)만으로 목록을 구분한다. 선택 표시는 왼쪽 강조 바 하나로 충분하다. */
+tr.srv-row {
+  background: transparent;
+  transition: background .12s ease;
+}
+/* Exact main dashboard row-hover recipe (css/table.css .qc-table tbody tr:hover) */
+tr.srv-row:hover { background: rgba(255,255,255,.04); }
+/* Was intentionally left unstyled ("checkbox alone is enough of a selection
+   indicator") — main dashboard does highlight the row too
+   (.qc-table tbody tr.selected, css/table.css:76-83), so match that. */
+tr.srv-row.selected { background: rgba(78,130,255,.1); border-color: rgba(120,177,255,.2); }
+tr.srv-row.selected:hover { background: rgba(78,130,255,.15); }
+/* 선택 표시는 체크박스 체크 표시 하나로 충분 — 행 배경/좌측 강조바는 번잡해서 뺀다 */
+
+tr.srv-row td {
+  padding: 13px 8px;
+  text-align: center;
+  border-bottom: 1px solid rgba(255,255,255,.06); /* matches .qc-table tbody td */
+  font-size: 12.5px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 160px;
+}
+
+td.col-host { text-align: left; }
+td.col-host .host-row { display: flex; align-items: center; gap: 6px; }
+td.col-host .host-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; font-weight: 600; color: var(--text); }
+td.col-host .host-edit-btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 18px; height: 18px; padding: 0; flex-shrink: 0;
+  border: none; border-radius: 5px; background: transparent; color: var(--text-mute);
+  cursor: pointer; opacity: .55; transition: opacity .1s ease;
+}
+td.col-host .host-edit-btn:hover { opacity: 1; background: var(--card-hover); color: var(--text); }
+
+/* ── 상태 셀 커스텀 툴팁 ────────────────────────────── */
+.status-tooltip {
+  position: fixed; z-index: 300; max-width: 320px;
+  background: #101014; border: 1px solid var(--border-strong); border-radius: 10px;
+  padding: 10px 12px; box-shadow: var(--shadow-modal);
+  font-size: 12px; line-height: 1.5; color: var(--text-dim);
+  opacity: 0; transform: translateY(2px); transition: opacity .1s ease, transform .1s ease;
+  pointer-events: none;
+}
+.status-tooltip.show { opacity: 1; transform: translateY(0); }
+.status-tooltip .tip-title { font-weight: 700; color: var(--text); margin-bottom: 4px; }
+.status-tooltip .tip-line { color: var(--text-dim); }
+.status-tooltip .tip-group { display: block; font-weight: 700; color: var(--text); margin-top: 6px; }
+.status-tooltip .tip-line:first-child .tip-group { margin-top: 0; }
+.status-tooltip .tip-badge {
+  display: inline-block; padding: 0 5px; border-radius: 4px; font-size: 10.5px;
+  background: var(--red-bg); color: var(--red); margin-left: 2px;
+}
+.status-tooltip .tip-ok {
+  display: inline-block; padding: 0 5px; border-radius: 4px; font-size: 10.5px;
+  background: var(--green-bg); color: var(--green); margin-left: 2px;
+}
+[class^="cell-"] { cursor: default; }
+td.col-ip { color: var(--text); font-size: 11.5px; }
+
+/* ── 액션 메뉴(작은 팝오버) — 전원 아이콘 클릭(재부팅/종료), 캡처 버튼 클릭(캡처 종류 선택) ── */
+.action-menu {
+  position: fixed; z-index: 300; min-width: 168px;
+  background: #101014; border: 1px solid var(--border-strong); border-radius: 10px;
+  padding: 6px; box-shadow: var(--shadow-modal);
+  opacity: 0; transform: translateY(2px); transition: opacity .1s ease, transform .1s ease;
+}
+.action-menu.show { opacity: 1; transform: translateY(0); }
+.action-menu-item {
+  display: flex; align-items: center; gap: 9px; width: 100%;
+  border: none; background: transparent; cursor: pointer;
+  padding: 8px 9px; border-radius: 7px;
+  font-size: 12.5px; font-weight: 500; color: var(--text-dim);
+  font-family: inherit; text-align: left;
+}
+.action-menu-item .icon { color: var(--text-mute); flex-shrink: 0; }
+.action-menu-item:hover { background: var(--card-hover); color: var(--text); }
+.action-menu-item:hover .icon { color: var(--accent); }
+.action-menu-item.danger { color: #fca5a5; }
+.action-menu-item.danger .icon { color: #ef4444; }
+.action-menu-item.danger:hover { background: var(--red-bg); color: #fecaca; }
+.action-menu-sep { height: 1px; background: var(--border-soft); margin: 5px 4px; }
+
+/* 체크박스는 심플하게 — 검은 배경 + 체크 시 흰색 v 표시만, 별도 색상 없음 */
+/* Same recipe as the main dashboard's .custom-checkbox (css/table.css:7-38) —
+   translucent unchecked state, blue/purple gradient fill once checked. */
+.chk-box {
+  width: 15px; height: 15px; border-radius: 5px;
+  border: 1.5px solid rgba(255,255,255,.15);
+  background: rgba(0,0,0,.3);
+  display: inline-flex; align-items: center; justify-content: center;
+  cursor: pointer; transition: background .2s, border-color .12s ease;
+}
+.chk-box:hover { background: rgba(0,0,0,.4); border-color: rgba(255,255,255,.25); }
+.chk-box.checked {
+  background: linear-gradient(135deg, rgba(78,130,255,.8), rgba(165,141,255,.6));
+  border-color: rgba(120,177,255,.5);
+}
+.chk-box svg { width: 9px; height: 9px; stroke: white; opacity: 0; transition: opacity .1s; }
+.chk-box.checked svg { opacity: 1; }
+
+.dot-ind { display: inline-flex; align-items: center; gap: 5px; font-size: 11.5px; color: var(--text-mute); }
+.dot-ind .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--text-mute); flex-shrink: 0; }
+.dot-ind.ok .dot { background: var(--green); box-shadow: 0 0 6px rgba(34,197,94,.55); }
+.dot-ind.ok { color: var(--green); }
+.dot-ind.fail .dot { background: var(--red); }
+.dot-ind.fail { color: var(--red); }
+
+.power-ind { display: inline-flex; align-items: center; }
+.power-ind.on { color: var(--green); }
+.power-ind.off { color: var(--red); }
+
+/* Status pill — soft-tinted badge with a small dot, matching reference "running / healthy" style */
+.pill {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-size: 10.5px; font-weight: 600;
+  padding: 3.5px 9px 3.5px 7px; border-radius: 999px;
+  background: var(--card); color: var(--text-mute);
+  border: 1px solid var(--border);
+}
+.pill .dot { width: 5px; height: 5px; border-radius: 50%; background: currentColor; flex-shrink: 0; }
+.pill.ok    { background: var(--green-bg);  color: var(--green);  border-color: rgba(34,197,94,.25); }
+.pill.warn  { background: var(--yellow-bg); color: var(--yellow); border-color: rgba(234,179,8,.25); }
+.pill.fail  { background: var(--red-bg);    color: var(--red);    border-color: rgba(239,68,68,.25); }
+/* .ok/.fail now carry the Health-style icon badge below, which already has
+   its own colored circle — the pill's own tinted background/border on top of
+   that just looked like a badge-inside-a-badge. Drop the pill chrome for
+   these two only; icon + plain colored text carries the status instead. */
+.pill.ok, .pill.fail { background: transparent; border-color: transparent; padding: 0; gap: 6px; }
+/* "정상"/"비정상" dot → the exact .status-complete / .health-critical badges
+   from the main dashboard's table Health column (css/components.css +
+   @keyframes in css/style.css), copied property-for-property including the
+   pulse/flash animation — not a simplified redraw. Only .ok/.fail get this;
+   .warn / .boot-a / .boot-b / .pending keep the plain dot (main has no reference icon for those). */
+.pill.ok .dot {
+  width: 18px; height: 18px;
+  background: linear-gradient(135deg, rgba(111,210,127,.9), rgba(72,187,120,.8));
+  border-radius: 50%;
+  position: relative;
+  box-shadow: 0 0 8px rgba(111,210,127,.4);
+  animation: complete-pulse 2s ease-in-out infinite;
+}
+.pill.ok .dot::after {
+  content: "✓"; position: absolute; inset: 0;
+  display: flex; align-items: center; justify-content: center;
+  color: white; font-size: 11px; font-weight: bold;
+  text-shadow: 0 0 2px rgba(0,0,0,.3);
+}
+.pill.fail .dot {
+  width: 18px; height: 18px;
+  border-radius: 50%;
+  position: relative;
+  background: linear-gradient(135deg, rgba(220,53,69,.9), rgba(183,28,28,.8));
+  box-shadow: 0 0 12px rgba(220,53,69,.6);
+  animation: critical-flash .6s ease-in-out infinite;
+}
+.pill.fail .dot::before {
+  content: "";
+  position: absolute;
+  width: 100%; height: 100%;
+  border-radius: 50%;
+  background: linear-gradient(135deg, rgba(220,53,69,.3), rgba(183,28,28,.2));
+  animation: critical-ring 1.5s ease-out infinite;
+  z-index: -1;
+}
+.pill.fail .dot::after {
+  content: "⚡"; position: absolute; inset: 0;
+  display: flex; align-items: center; justify-content: center;
+  color: white; font-size: 9px;
+}
+@keyframes complete-pulse {
+  0%, 100% { transform: scale(1); box-shadow: 0 0 8px rgba(111,210,127,.4); }
+  50% { transform: scale(1.1); box-shadow: 0 0 12px rgba(111,210,127,.6); }
+}
+@keyframes critical-flash {
+  0%, 100% { opacity: 1; transform: scale(1); box-shadow: 0 0 12px rgba(220,53,69,.6); }
+  50% { opacity: .7; transform: scale(1.12); box-shadow: 0 0 18px rgba(220,53,69,.8); }
+}
+@keyframes critical-ring {
+  0% { transform: scale(1); opacity: .8; }
+  100% { transform: scale(2.2); opacity: 0; }
+}
+/* 부팅 A/B 는 정상/비정상이 아니라 "어느 디스크로 부팅했는지" 구분이 목적 — 상태색(초록/노랑/빨강)과
+   겹치지 않는 별도 색 두 개로 한눈에 구별되게 한다. */
+.pill.boot-a { background: var(--accent-bg); color: var(--accent-hover); border-color: rgba(59,130,246,.3); }
+.pill.boot-b { background: rgba(217,119,255,.14); color: #e29bff; border-color: rgba(217,119,255,.3); }
+.pill.pending { background: var(--card); color: var(--text-dim); border-color: var(--border); }
+.pill.pending .dot { animation: pulse-dot 1.1s ease-in-out infinite; }
+@keyframes pulse-dot { 0%, 100% { opacity: .35; } 50% { opacity: 1; } }
+
+.muted-cell { color: var(--text-mute); }
+.spec-cell { color: var(--text); font-size: 11.5px; }
+
+/* per-row busy progress bar (own <tr> under the data row, spans full width via colspan) */
+tr.srv-row-progress td {
+  padding: 0; border: none; height: 0; line-height: 0; overflow: hidden;
+  transition: height .12s ease;
+}
+tr.srv-row-progress.busy td { height: 4px; }
+.row-progress {
+  height: 2px; margin: 0 8px; border-radius: 2px; overflow: hidden;
+  background: transparent;
+  pointer-events: none;
+}
+tr.srv-row-progress.busy .row-progress { background: var(--border-soft); }
+.row-progress .bar {
+  height: 100%; background: linear-gradient(90deg, var(--accent), #a5a6ff);
+  width: 0; border-radius: 2px;
+}
+.row-progress.indeterminate .bar {
+  width: 30%;
+  animation: indet 1.1s ease-in-out infinite;
+}
+@keyframes indet {
+  0%   { margin-left: -30%; }
+  100% { margin-left: 100%; }
+}
+.row-progress .bar.determinate { transition: width .35s ease; animation: none; margin-left: 0; }
+
+.empty-state {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  padding: 80px 20px; color: var(--text-mute); gap: 12px; text-align: center;
+}
+.empty-state .icon-wrap {
+  width: 48px; height: 48px; border-radius: 14px;
+  background: var(--panel); border: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: center;
+}
+.empty-state .icon-wrap svg { width: 22px; height: 22px; color: var(--text-mute); }
+.empty-state b { color: var(--text-dim); font-size: 13px; font-weight: 600; }
+
+/* ── 테이블 하단 페이지네이션 ───────────────────────────── */
+.table-pager {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 12px 4px; margin-top: 4px;
+  font-size: 11.5px; color: var(--text-mute);
+}
+.table-pager .pager-pages { display: flex; align-items: center; gap: 2px; }
+/* 버튼 테두리/배경 없이 숫자만 — 체크박스와 같은 톤의 심플한 하이라이트만 */
+.table-pager .pager-btn {
+  min-width: 22px; height: 22px; padding: 0 5px;
+  display: inline-flex; align-items: center; justify-content: center;
+  border: none; background: transparent; color: var(--text-mute);
+  border-radius: 6px; cursor: pointer; font-size: 11.5px; font-family: inherit;
+}
+.table-pager .pager-btn:hover:not(:disabled) { background: var(--card-hover); color: var(--text); }
+.table-pager .pager-btn:disabled { opacity: .3; cursor: not-allowed; }
+.table-pager .pager-btn.active { background: var(--card); color: var(--text); font-weight: 700; }
+.table-pager .pager-ellipsis { padding: 0 4px; color: var(--text-mute); }
+.table-pager .pager-prev .icon { transform: rotate(90deg); }
+.table-pager .pager-next .icon { transform: rotate(-90deg); }
+
+/* ── Log panel ──────────────────────────────────────── */
+/* Main dashboard has no equivalent panel to copy exactly, but leaving this as
+   a flat full-bleed bar looked jarring right under the new floating
+   .qc-panel card above it — same glass-card treatment for a consistent look. */
+.log-panel {
+  height: 168px; min-height: 110px; max-height: 75vh;
+  margin: 0 18px 14px;
+  background: radial-gradient(120% 120% at 50% -10%, rgba(255,255,255,.06), rgba(0,0,0,.30));
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(255,255,255,.12);
+  box-shadow: 0 20px 60px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.04);
+  border-radius: 14px;
+  /* Hidden in the main window — reachable only via "로그 창 열기", which pops
+     a separate browser window at ?logonly=1 (see html.log-only below). Not a
+     same-page tab/split — a genuinely separate window, like the original
+     desktop app's detached native log window. */
+  display: none;
+  flex-direction: column;
+  flex-shrink: 0;
+  position: relative;
+  overflow: hidden;
+}
+.log-resize-handle {
+  position: absolute; top: -4px; left: 0; right: 0; height: 8px;
+  cursor: ns-resize; z-index: 3;
+}
+.log-resize-handle:hover, .log-resize-handle.dragging { background: var(--accent-bg); }
+.log-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 7px 14px; border-bottom: 1px solid var(--border-soft);
+}
+.log-header .title { display: flex; align-items: center; gap: 6px; font-size: 10.5px; font-weight: 700; color: var(--text-dim); letter-spacing: .5px; cursor: grab; user-select: none; }
+.log-header .title:active { cursor: grabbing; }
+.log-body {
+  flex: 1; overflow-y: auto; padding: 6px 4px;
+  font-family: "Malgun Gothic", var(--mono); font-size: 12px;
+  user-select: text;
+}
+.log-line {
+  display: flex; gap: 8px; padding: 3px 10px;
+  border-left: 2px solid transparent;
+  line-height: 1.6;
+  user-select: text;
+}
+.log-line .ts { color: var(--text-mute); flex-shrink: 0; font-variant-numeric: tabular-nums; }
+.log-line .msg { font-weight: 600; }
+.log-line.ok   { border-color: var(--green); }
+.log-line.err  { border-color: var(--red); }
+.log-line.warn { border-color: var(--yellow); }
+.log-line.run  { border-color: var(--accent); }
+.log-line.dim  { border-color: var(--border); }
+.log-line.ok   .msg { color: #8ff0cb; }
+.log-line.err  .msg { color: #ffb0b0; }
+.log-line.warn .msg { color: #f5dd8c; }
+.log-line.run  .msg { color: #c2c3ff; }
+.log-line.dim  .msg { color: var(--text-dim); }
+
+/* ── 로그 전용 분리 창 (?logonly=1) ─────────────────────
+   "로그 창 열기" 버튼이 이 쿼리스트링으로 새 창을 띄운다 — 원본 데스크탑 앱의 분리된
+   네이티브 로그 창과 같은 역할. 사이드바/topbar/qc-panel(테이블 카드) 전부 감추고
+   로그 패널만 꽉 채운다. */
+html.log-only .sidebar,
+html.log-only .topbar,
+html.log-only .qc-panel,
+html.log-only .log-resize-handle { display: none !important; }
+html.log-only .log-panel {
+  display: flex !important;
+  flex: 1 !important; height: 100% !important; max-height: none !important;
+  min-height: 0 !important; margin: 0 !important; border-top: none;
+}
+html.log-only .log-header .title { cursor: default; }
+
+/* ── Toasts ─────────────────────────────────────────── */
+#toast-stack {
+  position: fixed; top: 16px; right: 16px; z-index: 9999;
+  display: flex; flex-direction: column; gap: 8px;
+  pointer-events: none;
+}
+.toast {
+  pointer-events: auto;
+  min-width: 240px; max-width: 360px;
+  background: #131316;
+  border: 1px solid var(--border-strong);
+  border-left: 3px solid var(--accent);
+  border-radius: var(--radius-sm);
+  padding: 10px 14px;
+  font-size: 12px;
+  box-shadow: var(--shadow-toast);
+  animation: toast-in .18s ease;
+}
+.toast.ok   { border-left-color: var(--green); }
+.toast.err  { border-left-color: var(--red); }
+.toast.warn { border-left-color: var(--yellow); }
+@keyframes toast-in { from { opacity: 0; transform: translateX(16px); } to { opacity: 1; transform: none; } }
+.toast.hide { animation: toast-out .18s ease forwards; }
+@keyframes toast-out { to { opacity: 0; transform: translateX(16px); } }
+
+/* ── Modals ─────────────────────────────────────────── */
+#modal-root { position: fixed; inset: 0; z-index: 999; pointer-events: none; }
+.modal-backdrop {
+  position: absolute; inset: 0;
+  background: rgba(2,2,3,.65);
+  backdrop-filter: blur(4px);
+  display: flex; align-items: center; justify-content: center;
+  opacity: 0; transition: opacity .15s ease;
+  pointer-events: auto;
+}
+.modal-backdrop.show { opacity: 1; }
+.modal-card {
+  background: #0d0d10;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-modal);
+  width: 480px; max-width: 92vw;
+  max-height: 86vh;
+  display: flex; flex-direction: column;
+  transform: scale(.96) translateY(6px); opacity: 0;
+  transition: transform .16s cubic-bezier(.2,.9,.3,1.2), opacity .16s ease;
+}
+.modal-backdrop.show .modal-card { transform: none; opacity: 1; }
+.modal-card.wide { width: 820px; }
+.modal-card.xwide { width: 980px; }
+.modal-head {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 17px 20px; border-bottom: 1px solid var(--border-soft);
+}
+.modal-head h3 { margin: 0; font-size: 14.5px; font-weight: 600; }
+.modal-body { padding: 20px; overflow-y: auto; }
+.modal-foot {
+  display: flex; align-items: center; justify-content: flex-end; gap: 8px;
+  padding: 14px 20px; border-top: 1px solid var(--border-soft);
+}
+.close-x {
+  width: 26px; height: 26px; border-radius: 7px; border: none;
+  background: transparent; color: var(--text-mute); cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+}
+.close-x:hover { background: var(--card); color: var(--text); }
+.close-x svg { width: 14px; height: 14px; }
+
+.form-row { margin-bottom: 26px; }
+.form-row:last-child { margin-bottom: 0; }
+.form-row label { display: flex; align-items: center; gap: 6px; font-size: 11.5px; color: var(--text-dim); margin-bottom: 6px; font-weight: 600; }
+.form-row label .icon { color: var(--accent); width: 12px; height: 12px; }
+.form-row .field { width: 100%; }
+.form-hint { font-size: 12.5px; font-weight: 500; line-height: 1.5; color: var(--text-dim); margin-top: 8px; }
+.form-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+textarea.field { resize: vertical; font-family: var(--mono); min-height: 120px; line-height: 1.5; }
+
+.key-row { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+.key-row .lbl { width: 150px; flex-shrink: 0; font-size: 12px; color: var(--text-dim); }
+.key-row input { flex: 1; font-family: var(--mono); }
+
+.browse-row { display: flex; gap: 8px; }
+.browse-row .field { flex: 1; }
+
+.tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--border-soft); padding: 0 20px; }
+.tab-btn {
+  display: flex; align-items: center; gap: 6px;
+  padding: 10px 4px; margin-right: 20px; background: none; border: none;
+  color: var(--text-mute); font-size: 12.5px; font-weight: 600; cursor: pointer;
+  border-bottom: 2px solid transparent;
+}
+.tab-btn .icon { color: var(--text-mute); }
+.tab-btn.active { color: var(--text); border-color: var(--accent); }
+.tab-btn.active .icon { color: var(--accent); }
+.tab-panel { display: none; }
+.tab-panel.active { display: block; }
+
+.mini-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+.mini-table th {
+  text-align: left; color: var(--text-mute); font-size: 10.5px;
+  letter-spacing: .2px; padding: 7px 8px; border-bottom: 1px solid var(--border-soft);
+  position: sticky; top: 0; background: #0d0d10; font-weight: 600;
+}
+.mini-table td { padding: 7px 8px; border-bottom: 1px solid var(--border-soft); }
+.mini-table tr:hover td { background: var(--card); }
+
+.filter-row { display: flex; gap: 10px; align-items: center; margin-bottom: 12px; }
+.filter-row select.field { width: auto; }
+
+/* ── 전체 장치 현황 (시리얼 x 분류 그리드) ──────────────── */
+.device-grid th, .device-grid td { text-align: center; }
+.device-grid th:first-child, .device-grid td.dg-serial { text-align: left; }
+.dg-serial { font-weight: 600; font-variant-numeric: tabular-nums; }
+.dg-cell { cursor: default; }
+.dg-cell .icon { vertical-align: -2px; }
+.dg-cell.dg-ok { color: var(--green); }
+.dg-cell.dg-bad { color: var(--red); font-weight: 700; }
+.dg-cell.dg-none { color: var(--text-mute); }
+.dg-overall { font-weight: 700; font-size: 11px; }
+.dg-overall.ok { color: var(--green); }
+.dg-overall.warn { color: var(--red); }
+.count-badge { margin-left: auto; font-size: 11px; color: var(--text-mute); font-variant-numeric: tabular-nums; }
+
+.capture-preview { display: flex; justify-content: center; }
+.capture-preview img { max-width: 100%; max-height: 60vh; border-radius: 10px; border: 1px solid var(--border); }
+
+.capture-block { margin-bottom: 18px; }
+.capture-block-title { font-size: 12px; font-weight: 600; color: var(--text-dim); margin-bottom: 8px; }
+.capture-block .capture-preview img { max-height: 40vh; }
+
+/* ── 캡처 뷰어 (전체화면, 이전/다음으로 시리얼 순서대로 넘겨보기) ── */
+.capture-viewer {
+  position: fixed; inset: 0; z-index: 200;
+  background: rgba(3, 3, 4, .92);
+  display: flex; flex-direction: column;
+  opacity: 0; pointer-events: none; transition: opacity .15s ease;
+}
+.capture-viewer.show { opacity: 1; pointer-events: auto; }
+.cv-head {
+  display: flex; align-items: center; gap: 12px; padding: 14px 20px;
+  border-bottom: 1px solid var(--border);
+}
+.cv-head select#cv-kind { width: auto; }
+.cv-title { font-size: 13px; font-weight: 600; color: var(--text); font-variant-numeric: tabular-nums; }
+.cv-head .close-x { margin-left: auto; }
+.cv-body {
+  flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center;
+  gap: 14px; padding: 16px 20px;
+}
+.cv-img-wrap { flex: 1; height: 100%; display: flex; align-items: center; justify-content: center; min-width: 0; }
+.cv-img-wrap img { max-width: 100%; max-height: 100%; border-radius: 10px; border: 1px solid var(--border); }
+.cv-loading, .cv-empty { color: var(--text-mute); font-size: 13px; }
+.cv-nav {
+  flex-shrink: 0; width: 44px; height: 64px; border-radius: 10px;
+  background: var(--card); border: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: center;
+  color: var(--text-dim); cursor: pointer;
+}
+.cv-nav:hover:not(:disabled) { background: var(--card-hover); color: var(--text); }
+.cv-nav:disabled { opacity: .3; cursor: default; }
+.cv-nav .icon { width: 18px; height: 18px; }
+.cv-prev .icon { transform: rotate(90deg); }
+.cv-next .icon { transform: rotate(-90deg); }
+.cv-hint { text-align: center; padding: 4px 20px 16px; font-size: 11px; color: var(--text-mute); word-break: break-all; }
+
+pre.qc-report {
+  background: #020203; border: 1px solid var(--border-soft); border-radius: 10px;
+  padding: 12px; font-family: var(--mono); font-size: 11px; line-height: 1.5;
+  max-height: 50vh; overflow: auto; white-space: pre; color: #cfcfd6;
+}
+
+.confirm-list { max-height: 220px; overflow-y: auto; background: var(--card); border: 1px solid var(--border-soft);
+  border-radius: 10px; padding: 8px 12px; font-size: 12px; color: var(--text-dim); font-family: var(--mono); }
+.confirm-list div { padding: 2px 0; }
+.confirm-danger { display: flex; align-items: center; gap: 6px; color: var(--red); font-size: 12px; margin-top: 10px; }
+.confirm-danger .icon { color: var(--red); }
